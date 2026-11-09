@@ -424,13 +424,12 @@ async function uploadFile(cfg, kind, blob, name, type, onProgress) {
     onProgress(1);
     return res.json();
   }
-  const { upload } = await import('/vendor/blob-client.js');
+  const { uploadPresigned } = await import('/vendor/blob-client.js');
   try {
-    return await upload(pathname, blob, {
+    return await uploadPresigned(pathname, blob, {
       access: 'public',
       handleUploadUrl: '/api/upload',
       contentType: type,
-      multipart: blob.size > 8 * MB,
       onUploadProgress: (e) => onProgress(e.percentage / 100),
     });
   } catch (err) {

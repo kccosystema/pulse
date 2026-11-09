@@ -1,6 +1,6 @@
 // Saves a share: validated song details + effect settings + beat timeline,
 // pointing at a cover and song already uploaded to our store.
-import { putJSON, isOurMediaUrl, storageMode } from '../lib/storage.js';
+import { putJSON, isOurMediaUrl, storageMode, blobAuth } from '../lib/storage.js';
 import { json } from '../lib/http.js';
 
 const FX = ['glow', 'shake', 'flash', 'tilt', 'bounce', 'echo', 'rings', 'sparks', 'rgb', 'bars', 'strobe', 'round'];
@@ -76,7 +76,7 @@ export async function POST(request) {
   };
 
   try {
-    await putJSON(`shares/${id}.json`, manifest);
+    await putJSON(`shares/${id}.json`, manifest, blobAuth(request));
   } catch (err) {
     console.error('share save failed', err);
     return json({ error: 'Could not save the share. Try again.' }, 500);

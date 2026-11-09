@@ -1,7 +1,7 @@
 // The share page: /s/:id → this function (see vercel.json rewrites).
 // Rendered on the server so link previews (iMessage, WhatsApp, socials)
 // show the cover, song and artist.
-import { getJSON, storageMode } from '../lib/storage.js';
+import { getJSON, storageMode, blobAuth } from '../lib/storage.js';
 import { renderView, renderNotFound } from '../lib/view-template.js';
 
 const html = (body, status, cache) =>
@@ -13,7 +13,7 @@ export async function GET(request) {
   if (!/^[A-Za-z0-9]{6,24}$/.test(id) || storageMode() === 'none') return html(renderNotFound(), 404, 'no-store');
   let manifest = null;
   try {
-    manifest = await getJSON(`shares/${id}.json`);
+    manifest = await getJSON(`shares/${id}.json`, blobAuth(request));
   } catch (err) {
     console.error('share load failed', err);
     return html(renderNotFound('Something went wrong loading this song. Try again in a moment.'), 500, 'no-store');
