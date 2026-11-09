@@ -41,7 +41,7 @@ button.primary { width: 100%; margin-top: 8px; padding: 14px; font-weight: 600; 
   background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
 button.rec { background: #d11f3a; border-color: #d11f3a; }
 
-.row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
 .row > button { flex: 1; font-size: 14px; padding: 9px 8px; }
 .sliders label { flex: 1; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
 .chips { gap: 6px; }
@@ -54,3 +54,17 @@ input[type=range] { flex: 1; width: 100%; accent-color: var(--accent); }
 #toast { position: fixed; top: calc(16px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
   background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: 14px;
   max-width: calc(100vw - 32px); text-align: center; }
+
+.status { margin: 2px 4px 0; min-height: 1.4em; font-size: 13px; color: var(--muted); }
+.lbl { font-size: 12px; color: var(--muted); flex: none; min-width: 52px; }
+.seg > button, .presets > button { flex: 1; font-size: 13px; padding: 7px 4px; }
+.seg > button.on { background: rgba(255, 61, 127, .25); border-color: var(--accent); }
+.bpm { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 54px; text-align: right; }
+.sliders label.dim { opacity: .4; }
+.sliders label span { color: var(--text); font-variant-numeric: tabular-nums; }
+.fx-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0; }
+.fx-grid .chip { font-size: 12.5px; padding: 7px 2px; }
+.bottom { max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; }
+.sliders .lab { white-space: nowrap; }
+.fx-grid[hidden] { display: none; }
+#fxToggle { flex: 1.3; }
