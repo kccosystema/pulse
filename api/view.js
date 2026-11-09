@@ -25,5 +25,5 @@ export async function GET(request) {
   const { owner, claimHash, ...publicManifest } = manifest;
   manifest = publicManifest;
   const origin = `${url.protocol}//${request.headers.get('x-forwarded-host') || url.host}`;
-  return html(renderView(manifest, origin), 200, manifest.expiresAt ? 'public, max-age=0, s-maxage=300' : 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400');
+  return html(renderView(manifest, origin), 200, 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
 }

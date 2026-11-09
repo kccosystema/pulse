@@ -35,6 +35,7 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `api/view.js` + `lib/view-template.js` | Renders `/s/<id>` with link-preview tags |
 | `api/media.js` | Same-origin fallback for streaming a shared song |
 | `api/config.js` | Tells the app whether sharing and sign-in are set up |
+| `api/plays.js`, `lib/counter.js` | Play counts (Upstash Redis REST) |
 | `api/claim.js`, `api/links.js`, `api/cleanup.js` | Claim guest links, list and delete a user's links, daily expiry cleanup |
 | `lib/auth.js`, `lib/shares.js` | Clerk token checks; share ownership, expiry and deletion |
 | `public/auth.js` | Sign-in, account button and My links, keeping work across sign-in |
@@ -45,6 +46,8 @@ Sign-in uses **Clerk** (Google, Apple and others, set up in the Clerk dashboard)
 
 - **Signed in:** share links are permanent and listed under **My links** (copy, open, delete).
 - **Guest:** links last **30 days**. The browser keeps a secret claim token, so signing in later on the same device makes the guest's links permanent.
+- **Editing:** **My links → Edit** reopens a link in the player. You can change the details, effects and picture, and **Save** updates the same link in place (`PATCH /api/share`, owner only). The song and its beat map stay the same.
+- **Play counts:** share pages show "This has been jammed X times!". A play counts after 5 s of listening, once per browser per day. Counts live in **Upstash Redis** (Vercel → Storage → Upstash), read through `KV_REST_API_URL` / `KV_REST_API_TOKEN`. Without it, the badge is hidden.
 - **Daily cleanup:** a Vercel Cron job (`api/cleanup`, 04:23 UTC) deletes expired guest links with their song and cover. Set `CRON_SECRET` to stop anyone else from triggering it. It only ever deletes expired links, so being triggered extra times is harmless.
 - **Sign-in leaves the page and comes back**, so the picture, song and details are saved in IndexedDB first and restored afterwards (`public/auth.js`).
 - **No key set:** the account button is hidden and every link is a 30-day guest link.

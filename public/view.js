@@ -77,3 +77,46 @@ $('shareBtn').addEventListener('click', async () => {
   }
   try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { toast(url); }
 });
+
+// ───────────────────────── "jammed X times" ─────────────────────────
+// A play counts once the listener has heard 5 seconds, once per browser per day.
+(() => {
+  const badge = $('jams');
+  const show = (n, bump) => {
+    badge.textContent = '';
+    if (n > 0) {
+      const b = document.createElement('b');
+      b.textContent = n.toLocaleString();
+      badge.append('🔥 This has been jammed ', b, n === 1 ? ' time!' : ' times!');
+    } else {
+      badge.textContent = '🔥 Be the first to jam this!';
+    }
+    badge.hidden = false;
+    if (bump) { badge.classList.remove('bump'); void badge.offsetWidth; badge.classList.add('bump'); }
+  };
+
+  fetch(`/api/plays?id=${encodeURIComponent(data.id)}`, { cache: 'no-store' })
+    .then((r) => r.json())
+    .then((r) => { if (r.enabled) show(r.plays[data.id] || 0, false); })
+    .catch(() => {});
+
+  const day = new Date().toISOString().slice(0, 10);
+  const seenKey = `pulse:jam:${data.id}`;
+  let counted = false;
+  try { counted = localStorage.getItem(seenKey) === day; } catch {}
+  let heard = 0, lastT = null;
+  audio.addEventListener('timeupdate', () => {
+    if (counted || audio.paused) { lastT = null; return; }
+    const t = audio.currentTime;
+    if (lastT !== null && t > lastT && t - lastT < 1.5) heard += t - lastT;
+    lastT = t;
+    if (heard < 5) return;
+    counted = true;
+    try { localStorage.setItem(seenKey, day); } catch {}
+    fetch(`/api/plays?id=${encodeURIComponent(data.id)}`, { method: 'POST' })
+      .then((r) => r.json())
+      .then((r) => { if (r.enabled) show(r.plays, true); })
+      .catch(() => {});
+  });
+  audio.addEventListener('seeking', () => { lastT = null; });
+})();

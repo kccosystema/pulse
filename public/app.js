@@ -50,6 +50,7 @@ function useImageFile(file) {
 // `restored` = { rawAnalysis } when coming back from sign-in (skips re-analysis
 // and keeps the details the user already entered).
 function useAudioFile(file, restored) {
+  stopEditing();
   if (state.audioURL) URL.revokeObjectURL(state.audioURL);
   state.audioURL = URL.createObjectURL(file);
   audio.src = state.audioURL;
@@ -210,6 +211,7 @@ canvas.addEventListener('click', () => $('player').classList.remove('hidden-ui')
 $('newBtn').addEventListener('click', () => {
   if (state.recorder) stopRecording();
   audio.pause();
+  stopEditing();
   goHome();
 });
 
@@ -268,7 +270,7 @@ $('detailsForm').addEventListener('submit', (e) => {
   applyDetails();
   save();
   closeSheets();
-  if (pendingShare) { pendingShare = false; openShare(); }
+  if (pendingShare) { pendingShare = false; editing ? openSaveSheet() : openShare(); }
 });
 $('d_website').addEventListener('input', () => $('d_website').setCustomValidity(''));
 
@@ -339,6 +341,7 @@ let pendingShare = false;
 let shareBusy = false;
 
 $('shareBtn').addEventListener('click', () => {
+  if (editing && details.title && details.artist) { openSaveSheet(); return; }
   if (!details.title || !details.artist) {
     pendingShare = true;
     openDetails('Add the song name and artist before sharing.');
@@ -598,6 +601,147 @@ function save() {
   syncUI();
   applyDetails();
 })();
+
+// ───────────────────────── editing a saved song ─────────────────────────
+// Opens one of the user's links in the player with its picture, song,
+// details and effects. Save updates the same link in place (the song and
+// its beat map stay; the picture can be swapped).
+
+let editing = null; // { id, url, imageChanged }
+const viaProxy = (u) => (u.startsWith('/') ? u : `/api/media?u=${encodeURIComponent(u)}`);
+
+async function startEdit(id) {
+  toast('Opening your song…');
+  try {
+    const res = await authFetch(`/api/share?id=${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(`load ${res.status}`);
+    const m = await res.json();
+    const pic = await fetch(viaProxy(m.image.url));
+    if (!pic.ok) throw new Error('picture');
+    const blob = await pic.blob();
+    if (state.recorder) stopRecording();
+    audio.pause();
+    await useImageFile(new File([blob], 'cover.jpg', { type: blob.type || 'image/jpeg' }));
+
+    // The song streams from storage through our own origin, so Web Audio
+    // effects and recording keep working.
+    analysisToken++;
+    if (state.audioURL && state.audioURL.startsWith('blob:')) URL.revokeObjectURL(state.audioURL);
+    state.audioURL = viaProxy(m.audio.url);
+    audio.src = state.audioURL;
+    state.audioFile = null;
+    state.rawAnalysis = null;
+    state.analyzing = false;
+    state.audioDelay = m.audio.delay || 0;
+    const a = m.analysis;
+    state.analysis = a ? {
+      bpm: a.bpm,
+      beats: a.beats.map(([t, s2, d]) => ({ t, s: s2, down: !!d })),
+      kicks: a.kicks.map(([t, z]) => ({ t, z })),
+      hits: a.hits.map(([t, z]) => ({ t, z })),
+    } : null;
+
+    Object.assign(details, { title: m.title, artist: m.artist, album: m.album || '', website: m.website || '' });
+    detailsTouched = true;
+    applyDetails();
+    const st = m.settings || {};
+    state.fx = { ...(st.fx || {}) };
+    if (typeof st.intensity === 'number') state.intensity = st.intensity;
+    if (typeof st.sensitivity === 'number') state.sensitivity = st.sensitivity;
+    if (st.mode) state.mode = st.mode;
+    $('intensity').value = Math.round(state.intensity * 100);
+    $('sensitivity').value = Math.round(state.sensitivity * 100);
+    syncUI();
+
+    editing = { id: m.id, url: `${location.origin}/s/${m.id}`, imageChanged: false };
+    state.shareLink = null;
+    $('shareBtn').textContent = 'Save';
+    enterPlayer();
+    updateBpm();
+    setStatus(a ? `${Math.round(a.bpm)} BPM` : '');
+    toast(`Editing “${m.title}”. Tap Save when you’re done.`);
+  } catch (err) {
+    console.warn('edit load failed', err);
+    toast('Could not open that song for editing');
+  }
+}
+
+function stopEditing() {
+  if (!editing) return;
+  editing = null;
+  state.audioDelay = 0;
+  $('shareBtn').textContent = 'Share';
+}
+
+function openSaveSheet() {
+  $('saveTitle').textContent = details.title;
+  $('saveSub').textContent = [details.artist, details.album].filter(Boolean).join(' · ');
+  $('saveError').hidden = true;
+  $('saveProgress').hidden = true;
+  $('saveForm').hidden = false;
+  $('saveDone').hidden = true;
+  $('savePicNote').textContent = editing.imageChanged ? 'New picture will be uploaded.' : '';
+  $('saveSheet').hidden = false;
+}
+
+$('changePicBtn').addEventListener('click', () => $('changePicInput').click());
+$('changePicInput').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if (!f || !editing) return;
+  if (await useImageFile(f)) {
+    editing.imageChanged = true;
+    $('savePicNote').textContent = 'New picture will be uploaded.';
+  }
+  e.target.value = '';
+});
+
+$('saveForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!editing || shareBusy) return;
+  shareBusy = true;
+  $('saveBtn').disabled = true;
+  $('saveError').hidden = true;
+  try {
+    let image;
+    if (editing.imageChanged) {
+      $('saveProgress').hidden = false;
+      const cfg = await fetch('/api/config').then((r) => r.json());
+      const cover = await coverJpeg(state.img);
+      const up = await uploadFile(cfg, 'img', cover.blob, 'cover.jpg', 'image/jpeg', (p) => {
+        $('saveProgressBar').style.width = `${Math.round(p * 100)}%`;
+      });
+      image = { url: up.url, width: cover.width, height: cover.height };
+    }
+    const res = await authFetch(`/api/share?id=${encodeURIComponent(editing.id)}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: details.title, artist: details.artist, album: details.album, website: details.website,
+        settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode },
+        image,
+      }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw userError(out.error || 'Could not save your changes.');
+    editing.imageChanged = false;
+    $('saveForm').hidden = true;
+    $('saveDone').hidden = false;
+    $('saveLink').value = out.url;
+    $('saveOpen').href = out.url;
+  } catch (err) {
+    console.warn('save failed', err);
+    $('saveError').textContent = err.userMessage || 'Could not save. Check your connection and try again.';
+    $('saveError').hidden = false;
+  } finally {
+    shareBusy = false;
+    $('saveBtn').disabled = false;
+    $('saveProgress').hidden = true;
+  }
+});
+
+$('saveCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('saveLink').value); toast('Link copied'); } catch { toast($('saveLink').value); }
+});
 
 // ───────────────────────── home page ↔ player ─────────────────────────
 

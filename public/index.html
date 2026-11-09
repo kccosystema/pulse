@@ -185,6 +185,39 @@
   </div>
 </div>
 
+<div class="sheet" id="saveSheet" hidden>
+  <div class="panel sheet-card">
+    <h2>Save changes</h2>
+    <p class="share-what"><b id="saveTitle"></b><br><span id="saveSub"></span></p>
+    <form id="saveForm">
+      <p class="note">Updates your existing link. Anyone who opens it will see the new version (it can take up to a minute to show up).</p>
+      <div class="row">
+        <button type="button" id="changePicBtn">Change picture</button>
+        <input type="file" accept="image/*" id="changePicInput" hidden>
+      </div>
+      <p class="note" id="savePicNote"></p>
+      <div id="saveProgress" class="progress" hidden>
+        <div class="bar"><span id="saveProgressBar"></span></div>
+        <small>Uploading picture…</small>
+      </div>
+      <p class="error" id="saveError" role="alert" hidden></p>
+      <div class="row">
+        <button type="button" data-close>Cancel</button>
+        <button type="submit" class="primary" id="saveBtn">Save changes</button>
+      </div>
+    </form>
+    <div id="saveDone" hidden>
+      <p class="note">✓ Saved. Your link now shows the new version.</p>
+      <input id="saveLink" class="link" readonly aria-label="Link" onclick="this.select()">
+      <div class="row">
+        <button type="button" id="saveCopy">Copy</button>
+        <a class="btn" id="saveOpen" target="_blank" rel="noopener">Open</a>
+        <button type="button" data-close>Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="recordSheet" hidden>
   <div class="panel sheet-card">
     <h2>Save your work</h2>

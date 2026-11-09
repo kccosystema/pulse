@@ -128,7 +128,8 @@ button.wide { width: 100%; margin: 4px 0 6px; }
 .link-meta b, .link-meta small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .link-meta small { color: var(--muted); }
 .link-actions { display: flex; gap: 6px; }
-.link-actions > * { flex: 1; font-size: 13px; padding: 6px 4px; }
+.link-actions > * { flex: 1; font-size: 13px; padding: 6px 2px; }
+.link-row .link-actions { grid-column: 2; }
 button.danger { color: #ff8a9b; border-color: rgba(255, 138, 155, .4); }
 
 /* ───────── home page (body.home); the player keeps the fixed full-screen layout ───────── */

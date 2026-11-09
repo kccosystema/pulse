@@ -219,6 +219,18 @@ async function loadMyLinks() {
     box.textContent = '';
     if (!links.length) { box.textContent = 'No links yet. Tap Share to make one.'; return; }
     for (const l of links) box.appendChild(linkRow(l));
+    // Jam counts, if play counting is set up.
+    fetch(`/api/plays?ids=${links.map((l) => l.id).join(',')}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((r) => {
+        if (!r.enabled) return;
+        for (const l of links) {
+          const el = box.querySelector(`[data-jams="${l.id}"]`);
+          const n = r.plays[l.id] || 0;
+          if (el) el.textContent = ` · 🔥 ${n.toLocaleString()} ${n === 1 ? 'jam' : 'jams'}`;
+        }
+      })
+      .catch(() => {});
   } catch {
     box.textContent = 'Could not load your links.';
   }
@@ -234,9 +246,14 @@ function linkRow(l) {
   const t = document.createElement('b'); t.textContent = l.title;
   const sub = document.createElement('small');
   sub.textContent = `${l.artist} · ${new Date(l.createdAt).toLocaleDateString()}`;
+  const jams = document.createElement('span');
+  jams.dataset.jams = l.id;
+  sub.appendChild(jams);
   meta.append(t, sub);
   const actions = document.createElement('div');
   actions.className = 'link-actions';
+  const edit = document.createElement('button'); edit.textContent = 'Edit'; edit.className = 'accent';
+  edit.onclick = () => { $('accountSheet').hidden = true; startEdit(l.id); };
   const copy = document.createElement('button'); copy.textContent = 'Copy';
   copy.onclick = async () => { try { await navigator.clipboard.writeText(l.url); toast('Link copied'); } catch { toast(l.url); } };
   const open = document.createElement('a'); open.className = 'btn'; open.textContent = 'Open'; open.href = l.url; open.target = '_blank'; open.rel = 'noopener';
@@ -248,7 +265,7 @@ function linkRow(l) {
     if (res && res.ok) { row.remove(); toast('Link deleted'); if (!$('myLinks').children.length) loadMyLinks(); }
     else { delBtn.disabled = false; toast('Could not delete the link'); }
   };
-  actions.append(copy, open, delBtn);
+  actions.append(edit, copy, open, delBtn);
   row.append(img, meta, actions);
   return row;
 }

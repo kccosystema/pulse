@@ -18,3 +18,15 @@
 @keyframes breathe { 50% { transform: translate(-50%, -50%) scale(1.07); } }
 @media (prefers-reduced-motion: reduce) { .big-play { animation: none; } }
 body.view #setup .btn { margin-top: 8px; width: 100%; }
+
+/* "This has been jammed X times!" */
+.jams { position: fixed; z-index: 6; top: calc(14px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  max-width: calc(100vw - 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; letter-spacing: .01em;
+  background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 61, 127, .45); box-shadow: 0 6px 24px rgba(255, 61, 127, .25); }
+.jams[hidden] { display: none; }
+.jams b { background: linear-gradient(90deg, #ff7aa8, #b49cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.jams.bump { animation: jam-bump .6s ease-out; }
+@keyframes jam-bump { 0% { transform: translateX(-50%) scale(1); } 35% { transform: translateX(-50%) scale(1.12); } 100% { transform: translateX(-50%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .jams.bump { animation: none; } }
