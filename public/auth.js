@@ -7,6 +7,9 @@
 'use strict';
 
 const CLERK_JS_VERSION = '6.40.1';
+// Clerk's sign-in screens ship separately (@clerk/ui) and must be handed to
+// Clerk.load(); without them openSignIn() throws and nothing appears.
+const CLERK_UI_VERSION = '1.41.2';
 
 const account = {
   mode: 'none',
@@ -37,33 +40,39 @@ async function initAccount() {
   notifyAccount(null);
 }
 
-function loadClerk({ publishableKey, frontendApi }) {
-  return new Promise((resolve) => {
+function loadScript(src, attrs = {}) {
+  return new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = `https://${frontendApi}/npm/@clerk/clerk-js@${CLERK_JS_VERSION}/dist/clerk.browser.js`;
+    s.src = src;
     s.async = true;
     s.crossOrigin = 'anonymous';
-    s.dataset.clerkPublishableKey = publishableKey;
-    s.onload = async () => {
-      try {
-        await window.Clerk.load();
-        account.user = clerkUser(window.Clerk.user);
-        window.Clerk.addListener(({ user }) => {
-          const prev = account.user;
-          const next = clerkUser(user);
-          if ((prev && prev.id) === (next && next.id)) return;
-          account.user = next;
-          notifyAccount(prev);
-        });
-      } catch (err) {
-        console.warn('Clerk failed to start', err);
-        account.mode = 'unavailable';
-      }
-      resolve();
-    };
-    s.onerror = () => { console.warn('Clerk failed to load'); account.mode = 'unavailable'; resolve(); };
+    Object.assign(s.dataset, attrs);
+    s.onload = resolve;
+    s.onerror = () => reject(new Error(`failed to load ${src}`));
     document.head.appendChild(s);
   });
+}
+
+async function loadClerk({ publishableKey, frontendApi }) {
+  try {
+    const base = `https://${frontendApi}/npm`;
+    await Promise.all([
+      loadScript(`${base}/@clerk/clerk-js@${CLERK_JS_VERSION}/dist/clerk.browser.js`, { clerkPublishableKey: publishableKey }),
+      loadScript(`${base}/@clerk/ui@${CLERK_UI_VERSION}/dist/ui.browser.js`),
+    ]);
+    await window.Clerk.load({ ui: { ClerkUI: window.__internal_ClerkUICtor } });
+    account.user = clerkUser(window.Clerk.user);
+    window.Clerk.addListener(({ user }) => {
+      const prev = account.user;
+      const next = clerkUser(user);
+      if ((prev && prev.id) === (next && next.id)) return;
+      account.user = next;
+      notifyAccount(prev);
+    });
+  } catch (err) {
+    console.warn('Clerk failed to start', err);
+    account.mode = 'unavailable';
+  }
 }
 
 function clerkUser(u) {
@@ -76,7 +85,13 @@ const accountsEnabled = () => account.mode === 'clerk' || account.mode === 'dev'
 
 async function signIn() {
   if (account.mode === 'clerk') {
-    window.Clerk.openSignIn({});
+    try {
+      window.Clerk.openSignIn({});
+    } catch (err) {
+      console.error('openSignIn failed', err);
+      if (window.Clerk.user) { account.user = clerkUser(window.Clerk.user); notifyAccount(null); }
+      else toast('Sign-in could not open. Please try again.');
+    }
   } else if (account.mode === 'dev') {
     const n = (prompt('Dev sign-in — any name:') || '').trim().replace(/[^\w.-]/g, '').slice(0, 32);
     if (!n) return;
