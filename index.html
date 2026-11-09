@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Pulse</title>
+<meta name="description" content="Make any image pulse to the beat of a song.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0b10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pulse">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="stage" aria-label="Pulsing image"></canvas>
+
+<main id="setup" class="panel">
+  <h1>Pulse</h1>
+  <p class="sub">Pick a picture and a song. The picture pulses to the beat.</p>
+
+  <label class="pick" id="pickImage">
+    <input type="file" accept="image/*" id="imageInput" hidden>
+    <span class="thumb" id="imageThumb">🖼️</span>
+    <span class="txt"><b>Image</b><small id="imageName">Tap to choose</small></span>
+  </label>
+
+  <label class="pick" id="pickAudio">
+    <input type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.flac" id="audioInput" hidden>
+    <span class="thumb">🎵</span>
+    <span class="txt"><b>Song</b><small id="audioName">Tap to choose</small></span>
+  </label>
+
+  <button id="startBtn" class="primary" disabled>Start</button>
+</main>
+
+<section id="player" class="panel bottom" hidden>
+  <div class="row">
+    <button id="playBtn" class="round" aria-label="Play">▶</button>
+    <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Seek">
+    <span id="time" class="time">0:00</span>
+  </div>
+  <div class="row sliders">
+    <label>Strength <input type="range" id="intensity" min="0" max="100" value="45"></label>
+    <label>Sensitivity <input type="range" id="sensitivity" min="0" max="100" value="55"></label>
+  </div>
+  <div class="row chips">
+    <button class="chip on" data-fx="glow">Glow</button>
+    <button class="chip" data-fx="shake">Shake</button>
+    <button class="chip" data-fx="flash">Flash</button>
+    <button class="chip" data-fx="round">Round</button>
+  </div>
+  <div class="row">
+    <button id="recordBtn">● Record</button>
+    <button id="hideBtn">Hide</button>
+    <button id="newBtn">New</button>
+  </div>
+</section>
+
+<div id="toast" role="status" hidden></div>
+
+<audio id="audio" preload="auto" playsinline></audio>
+<script src="app.js"></script>
+</body>
+</html>
