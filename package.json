@@ -4,13 +4,16 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "vendor": "esbuild scripts/blob-client-entry.js --bundle --format=esm --minify --target=es2019 --outfile=public/vendor/blob-client.js"
+    "vendor": "esbuild scripts/blob-client-entry.js --bundle --format=esm --minify --target=es2019 --outfile=public/vendor/blob-client.js && esbuild scripts/mp3-encoder-entry.js --bundle --format=iife --global-name=WME --minify --target=es2019 --outfile=public/vendor/mp3-encoder.js && cp node_modules/wasm-media-encoders/wasm/mp3.wasm public/vendor/mp3.wasm"
   },
   "dependencies": {
     "@vercel/blob": "2.8.2"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "wasm-media-encoders": "0.7.0"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

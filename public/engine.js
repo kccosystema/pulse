@@ -34,6 +34,7 @@ const state = {
   tiltDir: 1,
   recorder: null,
   credits: null,     // { title, artist, album } drawn under the picture
+  audioDelay: 0,     // s of silence an MP3 encoder added before the song (share page)
   showCredits: true,
 };
 
@@ -163,7 +164,7 @@ function mediaTime(now) {
 // What the listener is hearing right now, in song time.
 function heardTime(now) {
   const lat = actx ? Math.min(0.5, (actx.outputLatency || 0) + (actx.baseLatency || 0)) : 0;
-  return mediaTime(now) - lat - state.offset / 1000 + 0.012; // +12 ms ≈ one frame to reach the screen
+  return mediaTime(now) - lat - state.offset / 1000 - state.audioDelay + 0.012; // +12 ms ≈ one frame to reach the screen
 }
 
 // ───────────────────────── beat events ─────────────────────────

@@ -60,7 +60,12 @@ export async function POST(request) {
     album: str(m.album, 120),
     website: website(m.website),
     image: { url: m.image.url, width: num(m.image.width, 1, 10000, 1000), height: num(m.image.height, 1, 10000, 1000) },
-    audio: { url: m.audio.url, type: str(m.audio.type, 40) || 'audio/mpeg', duration: num(m.audio.duration, 0, 7200, null) },
+    audio: {
+      url: m.audio.url,
+      type: str(m.audio.type, 40) || 'audio/mpeg',
+      duration: num(m.audio.duration, 0, 7200, null),
+      delay: num(m.audio.delay, 0, 0.5, 0),
+    },
     settings: {
       fx,
       intensity: num(s.intensity, 0, 1, 0.45),

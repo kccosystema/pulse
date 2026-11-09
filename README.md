@@ -15,6 +15,7 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 - **Record:** saves or shares the result as a video (song name and artist included when shown).
 - **Details:** song name, artist, album and artist website. These fill in from the song file's tags or a file name like `Artist - Song.mp3`.
 - **Share:** uploads the cover and song and creates a link (`/s/<id>`) to a landing page. The page shows the pulsing picture with your effects, a Play button, the song details and the artist website. Texts and social apps show a preview card with the cover.
+  Studio files (WAV, AIFF, FLAC) and anything over 40 MB are converted to a 192 kbps MP3 on the phone before uploading. That's about 7× smaller, so share pages load quickly. The cap is 15 minutes per song.
 
 **Live:** https://pulse-three-ruddy-23.vercel.app. Every push to `main` deploys automatically through Vercel.
 
@@ -26,8 +27,9 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `public/engine.js` | Shared playback, beat sync, effects and rendering |
 | `public/beat-worker.js` | Song analysis: tempo, beats, downbeats, kicks, hits |
 | `public/view.js`, `public/view.css` | Share page player |
+| `public/encode-worker.js` | Converts big or lossless songs to MP3 before sharing (LAME via WebAssembly) |
 | `public/sw.js` | Offline cache. **Bump `VERSION` whenever you change a file in `public/`.** |
-| `public/vendor/blob-client.js` | Bundled Vercel Blob upload client (`npm run vendor` regenerates it) |
+| `public/vendor/` | Bundled Vercel Blob upload client and MP3 encoder (`npm run vendor` regenerates them) |
 | `api/upload.js` | Grants the browser permission to upload the cover and song straight to Vercel Blob |
 | `api/share.js` | Checks and saves a share (details, effect settings, beat map) |
 | `api/view.js` + `lib/view-template.js` | Renders `/s/<id>` with link-preview tags |

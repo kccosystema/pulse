@@ -12,6 +12,7 @@ state.intensity = data.settings.intensity;
 state.sensitivity = data.settings.sensitivity;
 state.mode = data.settings.mode;
 state.showCredits = false;
+state.audioDelay = data.audio.delay || 0;
 try { state.offset = +localStorage.getItem('pulse:viewOffset') || 0; } catch {}
 
 if (data.analysis) {

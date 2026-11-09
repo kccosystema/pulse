@@ -383,16 +383,21 @@ async function createShare(progress) {
   if (state.analyzing) throw userError('Still analyzing the song — try again in a moment.');
   const cfg = await fetch('/api/config').then((r) => r.json()).catch(() => ({}));
   if (cfg.storage !== 'blob' && cfg.storage !== 'local') throw userError('Sharing is not set up on this server yet.');
-  if (state.audioFile.size > 40 * MB) throw userError('That song file is over 40 MB. Try a smaller MP3.');
 
-  progress('Preparing cover…', 0.02);
+  // Studio files (WAV/AIFF/FLAC) and anything over the limit are converted
+  // to MP3 on the phone first, so uploads are small and share pages load fast.
+  let song = { blob: state.audioFile, name: safeName(state.audioFile.name, 'song.mp3'), delay: 0 };
+  song.type = state.audioFile.type || guessAudioType(song.name);
+  if (needsCompression(state.audioFile)) {
+    progress('Compressing song…', 0.02);
+    song = await compressSong(state.audioFile, (p) => progress(`Compressing song… ${Math.round(p * 100)}%`, 0.02 + p * 0.33));
+  }
+  if (song.blob.size > MAX_SONG) throw userError('That song is too long to share (over 40 MB even after compressing).');
+
+  progress('Preparing cover…', 0.35);
   const cover = await coverJpeg(state.img);
-  const audioName = safeName(state.audioFile.name, 'song.mp3');
-  const audioType = state.audioFile.type || guessAudioType(audioName);
-
-  progress('Uploading cover…', 0.05);
-  const img = await uploadFile(cfg, 'img', cover.blob, 'cover.jpg', 'image/jpeg', (p) => progress('Uploading cover…', 0.05 + p * 0.1));
-  const song = await uploadFile(cfg, 'audio', state.audioFile, audioName, audioType, (p) => progress('Uploading song…', 0.15 + p * 0.8));
+  const img = await uploadFile(cfg, 'img', cover.blob, 'cover.jpg', 'image/jpeg', (p) => progress('Uploading cover…', 0.35 + p * 0.05));
+  const up = await uploadFile(cfg, 'audio', song.blob, song.name, song.type, (p) => progress(`Uploading song… ${Math.round(p * 100)}%`, 0.4 + p * 0.55));
 
   progress('Creating link…', 0.97);
   const r = state.rawAnalysis;
@@ -400,7 +405,7 @@ async function createShare(progress) {
     v: 1,
     title: details.title, artist: details.artist, album: details.album, website: details.website,
     image: { url: img.url, width: cover.width, height: cover.height },
-    audio: { url: song.url, type: audioType, duration: isFinite(audio.duration) ? audio.duration : null },
+    audio: { url: up.url, type: song.type, duration: isFinite(audio.duration) ? audio.duration : null, delay: song.delay },
     settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode },
     analysis: r ? {
       bpm: r.bpm,
@@ -455,6 +460,56 @@ function safeName(name, fallback) {
   const ext = (name.match(/\.([a-z0-9]{2,5})$/i) || [, ''])[1].toLowerCase();
   const base = name.replace(/\.[^.]+$/, '').normalize('NFKD').replace(/[^\w.-]+/g, '-').replace(/^[-.]+|-+$/g, '').slice(0, 60).toLowerCase();
   return base && ext ? `${base}.${ext}` : fallback;
+}
+
+// ───────────────────────── song compression ─────────────────────────
+
+const MAX_SONG = 40 * MB;
+const MAX_MINUTES = 15;
+// MP3 encoders add ~1105 samples of lead-in silence (LAME encoder delay +
+// decoder delay) that browsers don't strip without a LAME tag. The share page
+// shifts the beat map by this much so effects stay on the beat.
+const MP3_DELAY_SAMPLES = 1105;
+
+function needsCompression(file) {
+  return /^audio\/(x-|vnd\.)?(wav|wave|aiff|flac)$/i.test(file.type)
+    || /\.(wav|wave|aif|aiff|aifc|flac)$/i.test(file.name)
+    || file.size > MAX_SONG;
+}
+
+let compressed = null; // { file, result } so a retry doesn't re-encode
+
+async function compressSong(file, onProgress) {
+  if (compressed && compressed.file === file) return compressed.result;
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const sampleRate = 44100;
+  const buf = await new Promise((resolve, reject) => {
+    file.arrayBuffer().then((ab) => {
+      const p = new OAC(2, 1, sampleRate).decodeAudioData(ab, resolve, reject);
+      if (p && p.then) p.then(resolve, reject);
+    }, reject);
+  }).catch(() => { throw userError('Could not read this song file to compress it. Try an MP3.'); });
+  if (buf.duration > MAX_MINUTES * 60) throw userError(`Songs longer than ${MAX_MINUTES} minutes can't be shared yet.`);
+
+  const stereo = buf.numberOfChannels >= 2;
+  const channels = [buf.getChannelData(0).slice()];
+  if (stereo) channels.push(buf.getChannelData(1).slice());
+  const blob = await new Promise((resolve, reject) => {
+    const w = new Worker('/encode-worker.js');
+    w.onmessage = (e) => {
+      const m = e.data;
+      if (m.type === 'progress') onProgress(m.p);
+      else if (m.type === 'done') { w.terminate(); resolve(m.blob); }
+      else { w.terminate(); reject(userError('Compressing the song failed. Try an MP3 instead.')); }
+    };
+    w.onerror = () => { w.terminate(); reject(userError('Compressing the song failed. Try an MP3 instead.')); };
+    w.postMessage({ channels, sampleRate, bitrate: stereo ? 192 : 128 }, channels.map((c) => c.buffer));
+  });
+  onProgress(1);
+  const base = safeName(file.name, 'song.wav').replace(/\.[^.]+$/, '');
+  const result = { blob, name: `${base}.mp3`, type: 'audio/mpeg', delay: MP3_DELAY_SAMPLES / sampleRate };
+  compressed = { file, result };
+  return result;
 }
 
 function guessAudioType(name) {
