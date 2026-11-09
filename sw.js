@@ -1,5 +1,5 @@
 // Offline cache for the Pulse app shell. Bump VERSION when files change.
-const VERSION = 'pulse-v2';
+const VERSION = 'pulse-v3';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
