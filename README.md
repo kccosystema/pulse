@@ -34,7 +34,22 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `api/share.js` | Checks and saves a share (details, effect settings, beat map) |
 | `api/view.js` + `lib/view-template.js` | Renders `/s/<id>` with link-preview tags |
 | `api/media.js` | Same-origin fallback for streaming a shared song |
-| `api/config.js` | Tells the app whether sharing is set up |
+| `api/config.js` | Tells the app whether sharing and sign-in are set up |
+| `api/claim.js`, `api/links.js`, `api/cleanup.js` | Claim guest links, list and delete a user's links, daily expiry cleanup |
+| `lib/auth.js`, `lib/shares.js` | Clerk token checks; share ownership, expiry and deletion |
+| `public/auth.js` | Sign-in, account button and My links, keeping work across sign-in |
+
+## Accounts and link expiry
+
+Sign-in uses **Clerk** (Google, Apple and others, set up in the Clerk dashboard). Only Clerk's *publishable* key is needed: set `CLERK_PUBLISHABLE_KEY` in Vercel, or put it in `lib/auth.js`. The server checks sign-ins against Clerk's public signing keys, so there is no secret key.
+
+- **Signed in:** share links are permanent and listed under **My links** (copy, open, delete).
+- **Guest:** links last **30 days**. The browser keeps a secret claim token, so signing in later on the same device makes the guest's links permanent.
+- **Daily cleanup:** a Vercel Cron job (`api/cleanup`, 04:23 UTC) deletes expired guest links with their song and cover. Set `CRON_SECRET` to stop anyone else from triggering it. It only ever deletes expired links, so being triggered extra times is harmless.
+- **Sign-in leaves the page and comes back**, so the picture, song and details are saved in IndexedDB first and restored afterwards (`public/auth.js`).
+- **No key set:** the account button is hidden and every link is a 30-day guest link.
+
+Storage layout: `shares/<id>.json` (a share), `owners/<user>/<id>.json` (a user's links), `expiry/<date>/<id>` (guest links due on that date).
 
 ## Sharing storage
 

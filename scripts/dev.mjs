@@ -12,6 +12,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const PUBLIC = path.join(ROOT, 'public');
 const DATA = path.join(ROOT, '.data');
 process.env.PULSE_LOCAL_STORAGE ||= DATA;
+process.env.PULSE_DEV_AUTH ||= '1'; // fake sign-in for local testing ("Bearer dev:<name>")
 const PORT = +process.env.PORT || 4400;
 
 const TYPES = {
@@ -58,7 +59,7 @@ http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const p = decodeURIComponent(url.pathname);
     if (p === '/api/config') {
-      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ storage: 'local' }));
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ storage: 'local', auth: { mode: 'dev' } }));
     } else if (p === '/api/dev-upload' && req.method === 'PUT') {
       const pathname = url.searchParams.get('pathname') || '';
       if (!/^media\/(img|audio)\/[\w.-]+$/.test(pathname)) { res.writeHead(400).end(); return; }

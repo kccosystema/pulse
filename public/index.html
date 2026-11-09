@@ -18,6 +18,7 @@
 </head>
 <body>
 <canvas id="stage" aria-label="Pulsing image"></canvas>
+<button id="acctBtn" class="acct-btn" hidden>Sign in</button>
 
 <main id="setup" class="panel">
   <h1>Pulse</h1>
@@ -115,6 +116,12 @@
     <p class="share-what"><b id="shareTitle"></b><br><span id="shareSub"></span></p>
     <form id="shareForm">
       <p class="note">Creates a page anyone with the link can open to watch and hear this song with your effects. The picture and song are uploaded.</p>
+      <div class="account-box" id="shareAccount" hidden>
+        <p><b>Keep this link forever</b><br><span>Sign in with Google or Apple. Without an account, links are deleted after 30 days.</span></p>
+        <button type="button" id="shareSignIn" class="accent">Sign in</button>
+      </div>
+      <p class="note" id="shareOwnerNote" hidden>✓ Saved to your account. Links don’t expire.</p>
+      <p class="note" id="shareGuestNote" hidden>Links are deleted after 30 days.</p>
       <label class="check"><input type="checkbox" id="s_rights" required> I own this music or have permission to share it</label>
       <div id="shareProgress" class="progress" hidden>
         <div class="bar"><span id="shareProgressBar"></span></div>
@@ -128,6 +135,8 @@
     </form>
     <div id="shareDone" hidden>
       <input id="shareLink" class="link" readonly aria-label="Share link" onclick="this.select()">
+      <p class="note expiry" id="shareExpiry"></p>
+      <button type="button" id="shareKeep" class="accent wide" hidden>Sign in to keep it forever</button>
       <div class="row">
         <button type="button" id="shareCopy">Copy</button>
         <button type="button" id="shareNative" class="accent">Share…</button>
@@ -138,10 +147,37 @@
   </div>
 </div>
 
+<div class="sheet" id="recordSheet" hidden>
+  <div class="panel sheet-card">
+    <h2>Save your work</h2>
+    <p class="note">Sign in with Google or Apple to keep your share links and find them again later. Recording works either way.</p>
+    <div class="row">
+      <button type="button" id="recordSkip">Not now</button>
+      <button type="button" class="primary" id="recordSignIn">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="accountSheet" hidden>
+  <div class="panel sheet-card">
+    <div class="acct-head">
+      <span class="acct-avatar" id="acctAvatar"></span>
+      <div><b id="acctName"></b><br><small id="acctEmail"></small></div>
+    </div>
+    <h3>My links</h3>
+    <div id="myLinks" class="my-links"></div>
+    <div class="row">
+      <button type="button" id="signOutBtn">Sign out</button>
+      <button type="button" data-close>Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" role="status" hidden></div>
 
 <audio id="audio" preload="auto" playsinline></audio>
 <script src="/engine.js"></script>
+<script src="/auth.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

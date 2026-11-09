@@ -1,6 +1,8 @@
 // Saves a share: validated song details + effect settings + beat timeline,
 // pointing at a cover and song already uploaded to our store.
-import { putJSON, isOurMediaUrl, storageMode, blobAuth } from '../lib/storage.js';
+import { isOurMediaUrl, storageMode, blobAuth } from '../lib/storage.js';
+import { getUser } from '../lib/auth.js';
+import { saveNewShare, newClaimToken, hashToken, GUEST_DAYS } from '../lib/shares.js';
 import { json } from '../lib/http.js';
 
 const FX = ['glow', 'shake', 'flash', 'tilt', 'bounce', 'echo', 'rings', 'sparks', 'rgb', 'bars', 'strobe', 'round'];
@@ -50,11 +52,18 @@ export async function POST(request) {
   for (const k of FX) if (s.fx && s.fx[k] === true) fx[k] = true;
   const a = m.analysis;
 
+  // Signed in → the link is theirs and never expires. Guest → it expires in
+  // 30 days unless claimed later with the secret claim token returned below.
+  const user = await getUser(request);
+  const claimToken = user ? null : newClaimToken();
   const id = randomId();
   const manifest = {
     v: 1,
     id,
     createdAt: new Date().toISOString(),
+    owner: user ? user.userId : null,
+    expiresAt: user ? null : new Date(Date.now() + GUEST_DAYS * 86400e3).toISOString(),
+    claimHash: claimToken ? hashToken(claimToken) : null,
     title,
     artist,
     album: str(m.album, 120),
@@ -81,11 +90,11 @@ export async function POST(request) {
   };
 
   try {
-    await putJSON(`shares/${id}.json`, manifest, blobAuth(request));
+    await saveNewShare(manifest, blobAuth(request));
   } catch (err) {
     console.error('share save failed', err);
     return json({ error: 'Could not save the share. Try again.' }, 500);
   }
   const origin = new URL(request.url).origin;
-  return json({ id, url: `${origin}/s/${id}` }, 201);
+  return json({ id, url: `${origin}/s/${id}`, expiresAt: manifest.expiresAt, claimToken }, 201);
 }

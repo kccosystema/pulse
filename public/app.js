@@ -21,40 +21,55 @@ const PRESETS = {
 
 // ───────────────────────── file pickers ─────────────────────────
 
-$('imageInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (state.imageURL) URL.revokeObjectURL(state.imageURL);
-  state.imageURL = URL.createObjectURL(file);
-  const img = new Image();
-  img.onload = () => {
-    state.img = img;
-    state.shareLink = null;
-    state.bgBlur = makeBlur(img);
-    state.channels = null;
-    $('imageThumb').style.backgroundImage = `url("${state.imageURL}")`;
-    $('imageThumb').textContent = '';
-    $('imageName').textContent = file.name;
-    $('pickImage').classList.add('done');
-    updateStart();
-  };
-  img.onerror = () => toast('Could not open that image');
-  img.src = state.imageURL;
-});
+$('imageInput').addEventListener('change', (e) => { if (e.target.files[0]) useImageFile(e.target.files[0]); });
+$('audioInput').addEventListener('change', (e) => { if (e.target.files[0]) useAudioFile(e.target.files[0]); });
 
-$('audioInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+function useImageFile(file) {
+  return new Promise((resolve) => {
+    if (state.imageURL) URL.revokeObjectURL(state.imageURL);
+    state.imageURL = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      state.img = img;
+      state.imageFile = file;
+      state.shareLink = null;
+      state.bgBlur = makeBlur(img);
+      state.channels = null;
+      $('imageThumb').style.backgroundImage = `url("${state.imageURL}")`;
+      $('imageThumb').textContent = '';
+      $('imageName').textContent = file.name || 'Picture';
+      $('pickImage').classList.add('done');
+      updateStart();
+      resolve(true);
+    };
+    img.onerror = () => { toast('Could not open that image'); resolve(false); };
+    img.src = state.imageURL;
+  });
+}
+
+// `restored` = { rawAnalysis } when coming back from sign-in (skips re-analysis
+// and keeps the details the user already entered).
+function useAudioFile(file, restored) {
   if (state.audioURL) URL.revokeObjectURL(state.audioURL);
   state.audioURL = URL.createObjectURL(file);
   audio.src = state.audioURL;
   state.audioFile = file;
   state.shareLink = null;
-  $('audioName').textContent = file.name;
-  prefillDetails(file);
+  $('audioName').textContent = file.name || 'Song';
   $('pickAudio').classList.add('done');
-  analyzeFile(file);
-});
+  if (restored && restored.rawAnalysis) {
+    analysisToken++;
+    state.rawAnalysis = restored.rawAnalysis;
+    state.analysis = prepare(restored.rawAnalysis);
+    state.analyzing = false;
+    setStatus(`${Math.round(restored.rawAnalysis.bpm)} BPM · ${restored.rawAnalysis.beats.length} beats found`);
+    updateStart();
+    updateBpm();
+  } else {
+    if (!restored) prefillDetails(file);
+    analyzeFile(file);
+  }
+}
 
 function updateStart() {
   const b = $('startBtn');
@@ -117,7 +132,7 @@ $('startBtn').addEventListener('click', async () => {
   play();
 });
 
-$('playBtn').addEventListener('click', () => (audio.paused ? play() : audio.pause()));
+$('playBtn').addEventListener('click', () => { initAudio(); if (audio.paused) play(); else audio.pause(); });
 audio.addEventListener('play', () => { $('playBtn').textContent = '❚❚'; $('playBtn').ariaLabel = 'Pause'; });
 audio.addEventListener('pause', () => { $('playBtn').textContent = '▶'; $('playBtn').ariaLabel = 'Play'; });
 audio.addEventListener('ended', () => { if (state.recorder) stopRecording(); });
@@ -200,7 +215,22 @@ $('newBtn').addEventListener('click', () => {
   $('setup').hidden = false;
 });
 
-$('recordBtn').addEventListener('click', () => (state.recorder ? stopRecording() : startRecording()));
+// Record: a one-time gentle nudge to sign in; recording works either way.
+$('recordBtn').addEventListener('click', () => {
+  if (state.recorder) { stopRecording(); return; }
+  let nagged = false;
+  try { nagged = sessionStorage.getItem('pulse:recNag') === '1'; } catch {}
+  if (accountsEnabled() && !account.user && !nagged) { $('recordSheet').hidden = false; return; }
+  initAudio();
+  startRecording();
+});
+$('recordSkip').addEventListener('click', () => {
+  try { sessionStorage.setItem('pulse:recNag', '1'); } catch {}
+  closeSheets();
+  initAudio();
+  startRecording();
+});
+$('recordSignIn').addEventListener('click', () => { closeSheets(); startSignIn('record'); });
 
 // ───────────────────────── song details ─────────────────────────
 
@@ -320,6 +350,7 @@ $('shareBtn').addEventListener('click', () => {
 });
 
 function openShare() {
+  updateShareAccountUI();
   $('shareTitle').textContent = details.title;
   $('shareSub').textContent = [details.artist, details.album].filter(Boolean).join(' · ');
   $('shareError').hidden = true;
@@ -342,8 +373,10 @@ $('shareForm').addEventListener('submit', async (e) => {
       $('shareProgressLabel').textContent = label;
       $('shareProgressBar').style.width = `${Math.round(p * 100)}%`;
     });
-    state.shareLink = link;
-    showShareLink(link);
+    state.shareLink = link.url;
+    state.shareId = link.id;
+    state.shareExpires = link.expiresAt;
+    showShareLink(link.url);
   } catch (err) {
     console.warn('share failed', err);
     $('shareError').textContent = err.userMessage || 'Upload failed. Check your connection and try again.';
@@ -355,7 +388,29 @@ $('shareForm').addEventListener('submit', async (e) => {
   }
 });
 
+// Signed out (and accounts available): offer sign-in so the link is kept;
+// otherwise it's a 30-day guest link.
+function updateShareAccountUI() {
+  const guest = !account.user;
+  const canSignIn = accountsEnabled() && guest;
+  // Signed in and this device no longer holds the claim → it was claimed.
+  if (!guest && state.shareExpires && !guestLinks().some((c) => c.id === state.shareId)) state.shareExpires = null;
+  $('shareAccount').hidden = !canSignIn;
+  $('shareOwnerNote').hidden = guest;
+  $('shareGuestNote').hidden = !guest || canSignIn;
+  $('shareCreate').textContent = guest ? 'Create 30-day link' : 'Create link';
+  const exp = state.shareExpires ? new Date(state.shareExpires) : null;
+  $('shareExpiry').textContent = exp
+    ? `This guest link stops working on ${exp.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`
+    : 'Saved to your account. This link won’t expire.';
+  $('shareKeep').hidden = !(exp && canSignIn);
+}
+
+$('shareSignIn').addEventListener('click', () => startSignIn('share'));
+$('shareKeep').addEventListener('click', () => startSignIn('share'));
+
 function showShareLink(link) {
+  updateShareAccountUI();
   $('shareForm').hidden = true;
   $('shareDone').hidden = false;
   $('shareLink').value = link;
@@ -414,11 +469,12 @@ async function createShare(progress) {
       hits: r.hits.map(([t, z]) => [+t.toFixed(3), +z.toFixed(2)]),
     } : null,
   };
-  const res = await fetch('/api/share', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(manifest) });
+  const res = await authFetch('/api/share', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(manifest) });
   const out = await res.json().catch(() => ({}));
   if (!res.ok || !out.url) throw userError(out.error || 'Could not create the link.');
+  if (out.claimToken) rememberGuestLink({ id: out.id, token: out.claimToken, expiresAt: out.expiresAt, title: details.title });
   progress('Done', 1);
-  return out.url;
+  return out;
 }
 
 async function uploadFile(cfg, kind, blob, name, type, onProgress) {
@@ -544,6 +600,52 @@ function save() {
   syncUI();
   applyDetails();
 })();
+
+// ───────────────────────── accounts ─────────────────────────
+
+// What to keep if the user leaves for Google/Apple sign-in.
+makeDraft = (pending) => (state.imageFile && state.audioFile ? {
+  pending,
+  image: state.imageFile,
+  audio: state.audioFile,
+  details: { ...details },
+  showCredits: state.showCredits,
+  rawAnalysis: state.rawAnalysis,
+  shareLink: state.shareLink ? { url: state.shareLink, id: state.shareId, expiresAt: state.shareExpires } : null,
+} : null);
+
+account.onChange((user, prev) => {
+  if (user && !prev) clearDraft(); // signed in without leaving the page
+  if (!$('shareSheet').hidden) updateShareAccountUI();
+});
+account.claimListeners.push((claimed) => {
+  if (state.shareId && claimed.includes(state.shareId)) {
+    state.shareExpires = null;
+    if (!$('shareSheet').hidden) updateShareAccountUI();
+  }
+});
+
+// Back from sign-in: put the picture, song and details back and carry on.
+async function restoreDraft() {
+  const d = await loadDraft();
+  if (!d) return;
+  await clearDraft();
+  if (!d.pending || Date.now() - d.at > 30 * 60 * 1000 || !d.image || !d.audio) return;
+  await useImageFile(d.image);
+  useAudioFile(d.audio, { rawAnalysis: d.rawAnalysis });
+  Object.assign(details, d.details || {});
+  detailsTouched = true;
+  if (typeof d.showCredits === 'boolean') state.showCredits = d.showCredits;
+  applyDetails();
+  if (d.shareLink) { state.shareLink = d.shareLink.url; state.shareId = d.shareLink.id; state.shareExpires = d.shareLink.expiresAt; }
+  $('setup').hidden = true;
+  $('player').hidden = false;
+  updateBpm();
+  if (d.pending === 'share') openShare();
+  else if (account.user) toast('Signed in. Tap Rec to record.');
+}
+
+initAccount().then(restoreDraft);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
