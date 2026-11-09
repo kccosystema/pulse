@@ -17,7 +17,7 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 - **Share:** uploads the cover and song and creates a link (`/s/<id>`) to a landing page. The page shows the pulsing picture with your effects, a Play button, the song details and the artist website. Texts and social apps show a preview card with the cover.
   Studio files (WAV, AIFF, FLAC) and anything over 40 MB are converted to a 192 kbps MP3 on the phone before uploading. That's about 7× smaller, so share pages load quickly. The cap is 15 minutes per song.
 
-**Live:** https://www.pulsepic.com. Every push to `main` deploys automatically through Vercel.
+**Live:** https://pulsepic.com. Every push to `main` deploys automatically through Vercel.
 
 ## Files
 
