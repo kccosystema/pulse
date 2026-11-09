@@ -1,4 +1,4 @@
-// Pulse creator: pick an image + song, tune effects, record or share.
+// PulsePic creator: pick an image + song, tune effects, record or share.
 // Rendering and beat sync live in engine.js.
 'use strict';
 

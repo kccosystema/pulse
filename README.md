@@ -1,4 +1,4 @@
-# Pulse
+# PulsePic
 
 A phone app (PWA) that makes a picture pulse to the beat of a song.
 

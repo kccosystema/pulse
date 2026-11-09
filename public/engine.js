@@ -1,4 +1,4 @@
-// Pulse engine: audio, beat timeline, effects and rendering.
+// PulsePic engine: audio, beat timeline, effects and rendering.
 // Shared by the creator (app.js) and the share page (view.js).
 // Pages set hooks on `engine` and call the functions below.
 'use strict';
@@ -635,9 +635,9 @@ function stopRecording() {
 
 async function finishVideo(blob, type) {
   const ext = type.includes('mp4') ? 'mp4' : 'webm';
-  const file = new File([blob], `pulse-${Date.now()}.${ext}`, { type });
+  const file = new File([blob], `pulsepic-${Date.now()}.${ext}`, { type });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'Pulse' }); return; }
+    try { await navigator.share({ files: [file], title: 'PulsePic' }); return; }
     catch (e) { if (e.name === 'AbortError') return; }
   }
   const a = document.createElement('a');

@@ -1,6 +1,6 @@
 {
-  "name": "Pulse — make a picture beat to music",
-  "short_name": "Pulse",
+  "name": "PulsePic — make a picture beat to music",
+  "short_name": "PulsePic",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
