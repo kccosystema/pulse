@@ -1,7 +1,7 @@
 // The share page: /s/:id → this function (see vercel.json rewrites).
 // Rendered on the server so link previews (iMessage, WhatsApp, socials)
 // show the cover, song and artist.
-import { getJSON } from '../lib/storage.js';
+import { getJSON, storageMode } from '../lib/storage.js';
 import { renderView, renderNotFound } from '../lib/view-template.js';
 
 const html = (body, status, cache) =>
@@ -10,7 +10,7 @@ const html = (body, status, cache) =>
 export async function GET(request) {
   const url = new URL(request.url);
   const id = url.searchParams.get('id') || '';
-  if (!/^[A-Za-z0-9]{6,24}$/.test(id)) return html(renderNotFound(), 404, 'no-store');
+  if (!/^[A-Za-z0-9]{6,24}$/.test(id) || storageMode() === 'none') return html(renderNotFound(), 404, 'no-store');
   let manifest = null;
   try {
     manifest = await getJSON(`shares/${id}.json`);
