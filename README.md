@@ -12,22 +12,35 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 - **Offset:** shifts the visuals later if they come before the sound, which is common with Bluetooth headphones (try +150 to +250 ms).
 - **Effects:** Glow, Shake, Flash, Tilt, Bounce, Echo, Rings, Sparks, RGB split, Bars, Strobe (bar starts), Circle.
 - **Presets:** Chill, Club, Hype.
-- **Record:** saves or shares the result as a video.
+- **Record:** saves or shares the result as a video (song name and artist included when shown).
+- **Details:** song name, artist, album and artist website. These fill in from the song file's tags or a file name like `Artist - Song.mp3`.
+- **Share:** uploads the cover and song and creates a link (`/s/<id>`) to a landing page. The page shows the pulsing picture with your effects, a Play button, the song details and the artist website. Texts and social apps show a preview card with the cover.
 
 **Live:** https://pulse-three-ruddy-23.vercel.app. Every push to `main` deploys automatically through Vercel.
 
 ## Files
 
-| File | What it is |
+| Path | What it is |
 | --- | --- |
-| `index.html` | Page markup |
-| `style.css` | Styles |
-| `app.js` | Playback, effects, canvas rendering, recording |
-| `beat-worker.js` | Song analysis: tempo, beats, downbeats, kicks, hits |
-| `sw.js` | Offline cache. **Bump `VERSION` whenever you change any file** so installed phones pick up the update. |
-| `manifest.webmanifest`, `icon*` | Install / home-screen metadata |
-| `vercel.json` | Static hosting config (no build step) |
+| `public/index.html`, `public/app.js` | Creator: pick image and song, effects, details, record, share |
+| `public/engine.js` | Shared playback, beat sync, effects and rendering |
+| `public/beat-worker.js` | Song analysis: tempo, beats, downbeats, kicks, hits |
+| `public/view.js`, `public/view.css` | Share page player |
+| `public/sw.js` | Offline cache. **Bump `VERSION` whenever you change a file in `public/`.** |
+| `public/vendor/blob-client.js` | Bundled Vercel Blob upload client (`npm run vendor` regenerates it) |
+| `api/upload.js` | Grants the browser permission to upload the cover and song straight to Vercel Blob |
+| `api/share.js` | Checks and saves a share (details, effect settings, beat map) |
+| `api/view.js` + `lib/view-template.js` | Renders `/s/<id>` with link-preview tags |
+| `api/media.js` | Same-origin fallback for streaming a shared song |
+| `api/config.js` | Tells the app whether sharing is set up |
+
+## Sharing storage
+
+Shares are stored in a **Vercel Blob** store connected to this project. Connecting it adds `BLOB_READ_WRITE_TOKEN` to the project automatically. Without a store, everything works except **Share**, which says sharing isn't set up.
 
 ## Run locally
 
-Any static server works, for example `npx serve .`, then open the printed URL.
+```bash
+npm install
+npm run dev   # http://localhost:4400, sharing saved to .data/ instead of Vercel Blob
+```

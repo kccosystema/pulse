@@ -1,10 +1,6 @@
-// Pulse — makes an image pulse to the beat of a song.
-// Everything runs on the phone: files never leave the device.
-//
-// When a song is picked it is decoded and analyzed once (beat-worker.js) to
-// get its tempo, a beat grid, downbeats, kick hits and all hits. Playback then
-// fires effects from that timeline, so beats land on time instead of late.
-// If analysis fails, a live bass detector is used as a fallback.
+// Pulse engine: audio, beat timeline, effects and rendering.
+// Shared by the creator (app.js) and the share page (view.js).
+// Pages set hooks on `engine` and call the functions below.
 'use strict';
 
 const $ = (id) => document.getElementById(id);
@@ -12,10 +8,11 @@ const canvas = $('stage');
 const ctx = canvas.getContext('2d');
 const audio = $('audio');
 
-const PRESETS = {
-  chill: { intensity: 0.3, fx: ['glow', 'rings', 'echo'] },
-  club: { intensity: 0.5, fx: ['glow', 'flash', 'rings', 'bars', 'tilt'] },
-  hype: { intensity: 0.8, fx: ['glow', 'shake', 'flash', 'rgb', 'sparks', 'strobe', 'echo', 'bounce'] },
+const engine = {
+  // Height (CSS px) of the area the picture should sit in; pages override.
+  areaHeight: () => H,
+  onFrame: () => {},
+  onRecordChange: () => {},
 };
 
 const state = {
@@ -36,48 +33,9 @@ const state = {
   hue: 330,
   tiltDir: 1,
   recorder: null,
+  credits: null,     // { title, artist, album } drawn under the picture
+  showCredits: true,
 };
-
-// ───────────────────────── file pickers ─────────────────────────
-
-$('imageInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (state.imageURL) URL.revokeObjectURL(state.imageURL);
-  state.imageURL = URL.createObjectURL(file);
-  const img = new Image();
-  img.onload = () => {
-    state.img = img;
-    state.bgBlur = makeBlur(img);
-    state.channels = null;
-    $('imageThumb').style.backgroundImage = `url("${state.imageURL}")`;
-    $('imageThumb').textContent = '';
-    $('imageName').textContent = file.name;
-    $('pickImage').classList.add('done');
-    updateStart();
-  };
-  img.onerror = () => toast('Could not open that image');
-  img.src = state.imageURL;
-});
-
-$('audioInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (state.audioURL) URL.revokeObjectURL(state.audioURL);
-  state.audioURL = URL.createObjectURL(file);
-  audio.src = state.audioURL;
-  $('audioName').textContent = file.name;
-  $('pickAudio').classList.add('done');
-  analyzeFile(file);
-});
-
-function updateStart() {
-  const b = $('startBtn');
-  b.disabled = !(state.img && state.audioURL) || state.analyzing;
-  b.textContent = state.analyzing ? 'Analyzing song…' : 'Start';
-}
-
-function setStatus(msg) { $('status').textContent = msg; }
 
 // Downscale to a tiny canvas; drawing it back up big gives a soft blur that
 // works everywhere (Safari has no ctx.filter).
@@ -111,39 +69,6 @@ function makeChannels(img) {
 
 // ───────────────────────── song analysis ─────────────────────────
 
-let analysisToken = 0;
-
-async function analyzeFile(file) {
-  const token = ++analysisToken;
-  state.analysis = null;
-  state.analyzing = true;
-  updateStart();
-  setStatus('Reading song…');
-  try {
-    const buf = await file.arrayBuffer();
-    if (token !== analysisToken) return;
-    setStatus('Decoding…');
-    const decoded = await decode(buf);
-    if (token !== analysisToken) return;
-    const mono = mixdown(decoded);
-    setStatus('Finding the beat… 0%');
-    const r = await runWorker(mono, decoded.sampleRate, (p) => {
-      if (token === analysisToken) setStatus(`Finding the beat… ${Math.round(p * 100)}%`);
-    });
-    if (token !== analysisToken) return;
-    state.analysis = prepare(r);
-    setStatus(`${Math.round(r.bpm)} BPM · ${r.beats.length} beats found`);
-  } catch (err) {
-    if (token !== analysisToken) return;
-    console.warn('analysis failed', err);
-    state.analysis = null;
-    setStatus('Could not analyze this song — using live beat detection');
-  }
-  state.analyzing = false;
-  updateStart();
-  updateBpm();
-}
-
 async function decode(buf) {
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   if (!OAC) throw new Error('no OfflineAudioContext');
@@ -167,7 +92,7 @@ function mixdown(ab) {
 
 function runWorker(samples, sampleRate, onProgress) {
   return new Promise((resolve, reject) => {
-    const w = new Worker('beat-worker.js');
+    const w = new Worker('/beat-worker.js');
     w.onmessage = (e) => {
       const m = e.data;
       if (m.type === 'progress') onProgress(m.p);
@@ -186,11 +111,6 @@ function prepare(r) {
     kicks: r.kicks.map(([t, z]) => ({ t, z })),
     hits: r.hits.map(([t, z]) => ({ t, z })),
   };
-}
-
-function updateBpm() {
-  $('bpm').textContent = state.analysis ? `${Math.round(state.analysis.bpm)} BPM` : (state.analyzing ? '…' : 'live');
-  $('sensLabel').classList.toggle('dim', state.mode === 'beat' && !!state.analysis);
 }
 
 // ───────────────────────── audio graph ─────────────────────────
@@ -381,7 +301,7 @@ function frame(now) {
   strobe *= Math.exp(-dt / 0.05);
 
   draw(now, dt);
-  updateTime();
+  engine.onFrame();
   requestAnimationFrame(frame);
 }
 
@@ -431,17 +351,22 @@ function draw(now, dt) {
     c.fillRect(0, 0, W, H);
   }
 
-  // Fit into the space above the control panel (whole screen when hidden or recording).
-  const panel = $('player');
-  const showing = !panel.hidden && !panel.classList.contains('hidden-ui') && !state.recorder;
-  const areaH = showing ? Math.max(H * 0.35, panel.getBoundingClientRect().top) : H;
+  // Fit into the page's picture area (the whole screen while recording),
+  // leaving room underneath for the song credits when they are shown.
+  const areaH = state.recorder ? H : Math.max(H * 0.35, Math.min(H, engine.areaHeight()));
+  const credits = state.showCredits && state.credits && (state.credits.title || state.credits.artist) ? state.credits : null;
+  const font = creditFont();
+  const creditH = credits ? 18 + font.big * 1.25 + (credits.artist || credits.album ? font.small * 1.3 : 0) + 8 : 0;
+  const boxH = areaH - creditH;
   const pad = 0.78;
-  const fit = Math.min((W * pad) / img.width, (areaH * pad) / img.height);
+  const fit = Math.min((W * pad) / img.width, (boxH * (credits ? 0.84 : pad)) / img.height);
   let w = img.width * fit, h = img.height * fit;
   if (fx.round) { const d = Math.min(w, h); w = h = d; }
   const r = fx.round ? w / 2 : Math.min(w, h) * 0.04;
+  // With credits, the picture + text block is centred together in the area.
+  const baseCy = credits ? (areaH - creditH - h) / 2 + h / 2 + Math.max(0, (boxH - h) * 0.1) : areaH / 2;
 
-  let cx = W / 2, cy = areaH / 2;
+  let cx = W / 2, cy = baseCy;
   if (fx.bounce) cy -= h * 0.12 * k * p;
   if (fx.shake && p > 0.05) {
     const s = 16 * k * p;
@@ -452,7 +377,7 @@ function draw(now, dt) {
   const rot = fx.tilt ? state.tiltDir * k * 0.12 * p : 0;
   layout = { cx, cy, w: w * scale, h: h * scale };
 
-  if (fx.bars) drawBars(c, cx, areaH / 2, w * scale, h * scale, fx.round, areaH);
+  if (fx.bars) drawBars(c, cx, baseCy, w * scale, h * scale, fx.round, areaH);
   if (fx.rings) drawRings(c, now, cx, cy, w * scale, h * scale, r * scale);
   if (fx.echo) drawEchoes(c, now, cx, cy, w, h, r, scale, rot);
 
@@ -483,6 +408,7 @@ function draw(now, dt) {
   }
   c.restore();
 
+  if (credits) drawCredits(c, credits, baseCy + h / 2 + 18, font);
   if (sparks.length) drawSparks(c, dt);
 
   if (flash > 0.02) {
@@ -495,6 +421,42 @@ function draw(now, dt) {
     c.fillRect(0, 0, W, H);
     c.globalCompositeOperation = 'source-over';
   }
+}
+
+// Song title / artist / album under the picture (also lands in recorded videos).
+function creditFont() {
+  const big = Math.round(Math.max(16, Math.min(30, W * 0.055)));
+  return { big, small: Math.round(big * 0.62) };
+}
+
+function drawCredits(c, cr, top, { big, small }) {
+  const maxW = W * 0.9;
+  c.save();
+  c.textAlign = 'center';
+  c.textBaseline = 'top';
+  c.shadowColor = 'rgba(0,0,0,0.6)';
+  c.shadowBlur = 8;
+  let y = top;
+  if (cr.title) {
+    c.font = `700 ${big}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+    c.fillStyle = '#fff';
+    c.fillText(fitText(c, cr.title, maxW), W / 2, y);
+    y += big * 1.25;
+  }
+  const sub = [cr.artist, cr.album].filter(Boolean).join(' · ');
+  if (sub) {
+    c.font = `500 ${small}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+    c.fillStyle = `hsla(${state.hue}, 90%, 82%, 0.95)`;
+    c.fillText(fitText(c, sub, maxW), W / 2, y);
+  }
+  c.restore();
+}
+
+function fitText(c, text, maxW) {
+  if (c.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && c.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
 }
 
 // Draw an image (contain-fit, or cover-fit for the circle) centred on 0,0.
@@ -619,104 +581,10 @@ function drawIdle() {
 
 requestAnimationFrame(frame);
 
-// ───────────────────────── controls ─────────────────────────
-
-$('startBtn').addEventListener('click', async () => {
-  initAudio();
-  await actx.resume();
-  $('setup').hidden = true;
-  $('player').hidden = false;
-  updateBpm();
-  play();
-});
-
 function play() {
   if (actx && actx.state !== 'running') actx.resume();
   audio.play().catch(() => toast('Tap ▶ to play'));
 }
-
-$('playBtn').addEventListener('click', () => (audio.paused ? play() : audio.pause()));
-audio.addEventListener('play', () => { $('playBtn').textContent = '❚❚'; $('playBtn').ariaLabel = 'Pause'; });
-audio.addEventListener('pause', () => { $('playBtn').textContent = '▶'; $('playBtn').ariaLabel = 'Play'; });
-audio.addEventListener('ended', () => { if (state.recorder) stopRecording(); });
-
-let seeking = false;
-$('seek').addEventListener('input', () => {
-  seeking = true;
-  if (audio.duration) audio.currentTime = ($('seek').value / 1000) * audio.duration;
-});
-$('seek').addEventListener('change', () => { seeking = false; });
-
-const fmt = (s) => (isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : '0:00');
-let lastShown = -1;
-function updateTime() {
-  const t = Math.floor(audio.currentTime);
-  if (!seeking && audio.duration) $('seek').value = Math.round((audio.currentTime / audio.duration) * 1000);
-  if (t !== lastShown) { lastShown = t; $('time').textContent = fmt(audio.currentTime); }
-}
-
-$('intensity').addEventListener('input', (e) => { state.intensity = e.target.value / 100; save(); });
-$('sensitivity').addEventListener('input', (e) => { state.sensitivity = e.target.value / 100; save(); });
-$('offset').addEventListener('input', (e) => { state.offset = +e.target.value; showOffset(); save(); });
-function showOffset() { $('offsetVal').textContent = `${state.offset > 0 ? '+' : ''}${state.offset} ms`; }
-
-document.querySelectorAll('[data-mode]').forEach((b) => {
-  b.addEventListener('click', () => { state.mode = b.dataset.mode; syncUI(); save(); });
-});
-
-document.querySelectorAll('[data-fx]').forEach((b) => {
-  b.addEventListener('click', () => {
-    const k = b.dataset.fx;
-    state.fx[k] = !state.fx[k];
-    syncUI();
-    save();
-  });
-});
-
-document.querySelectorAll('[data-preset]').forEach((b) => {
-  b.addEventListener('click', () => {
-    const p = PRESETS[b.dataset.preset];
-    const round = !!state.fx.round; // shape is a separate choice
-    state.fx = Object.fromEntries(p.fx.map((f) => [f, true]));
-    state.fx.round = round;
-    state.intensity = p.intensity;
-    $('intensity').value = Math.round(p.intensity * 100);
-    syncUI();
-    save();
-    toast(`${b.textContent} preset`);
-  });
-});
-
-function syncUI() {
-  document.querySelectorAll('[data-fx]').forEach((b) => b.classList.toggle('on', !!state.fx[b.dataset.fx]));
-  document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === state.mode));
-  updateBpm();
-}
-
-// Fold the effects grid away to give the picture more room.
-function setFxOpen(open) {
-  $('fxGrid').hidden = !open;
-  $('fxToggle').textContent = open ? 'Effects ▾' : 'Effects ▸';
-  $('fxToggle').setAttribute('aria-expanded', String(open));
-  try { localStorage.setItem('pulse:fxOpen', open ? '1' : '0'); } catch {}
-}
-$('fxToggle').addEventListener('click', () => setFxOpen($('fxGrid').hidden));
-try { setFxOpen(localStorage.getItem('pulse:fxOpen') !== '0'); } catch { setFxOpen(true); }
-
-// Hide controls for a clean full-screen view; tap anywhere to bring them back.
-$('hideBtn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  $('player').classList.add('hidden-ui');
-  toast('Tap the screen to show controls');
-});
-canvas.addEventListener('click', () => $('player').classList.remove('hidden-ui'));
-
-$('newBtn').addEventListener('click', () => {
-  if (state.recorder) stopRecording();
-  audio.pause();
-  $('player').hidden = true;
-  $('setup').hidden = false;
-});
 
 // ───────────────────────── recording ─────────────────────────
 // Records the canvas + song to a video you can save or share.
@@ -725,8 +593,6 @@ function pickMime() {
   const types = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
   return types.find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
 }
-
-$('recordBtn').addEventListener('click', () => (state.recorder ? stopRecording() : startRecording()));
 
 function startRecording() {
   if (!canvas.captureStream || !window.MediaRecorder || !recDest) {
@@ -754,16 +620,14 @@ function startRecording() {
   audio.currentTime = 0;
   rec.start(1000);
   play();
-  $('recordBtn').textContent = '■ Stop';
-  $('recordBtn').classList.add('rec');
+  engine.onRecordChange(true);
   toast('Recording… plays to the end, or tap Stop');
 }
 
 function stopRecording() {
   const rec = state.recorder;
   state.recorder = null;
-  $('recordBtn').textContent = '● Record';
-  $('recordBtn').classList.remove('rec');
+  engine.onRecordChange(false);
   if (rec && rec.state !== 'inactive') rec.stop();
   audio.pause();
 }
@@ -796,36 +660,7 @@ function toast(msg) {
   toastTimer = setTimeout(() => (t.hidden = true), 2600);
 }
 
-function save() {
-  try {
-    localStorage.setItem('pulse:settings', JSON.stringify({
-      fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, offset: state.offset, mode: state.mode,
-    }));
-  } catch {}
-}
-(function load() {
-  try {
-    const s = JSON.parse(localStorage.getItem('pulse:settings'));
-    if (s) {
-      if (s.fx) state.fx = s.fx;
-      state.intensity = s.intensity ?? state.intensity;
-      state.sensitivity = s.sensitivity ?? state.sensitivity;
-      state.offset = s.offset ?? 0;
-      if (['beat', 'kick', 'hits'].includes(s.mode)) state.mode = s.mode;
-    }
-  } catch {}
-  $('intensity').value = Math.round(state.intensity * 100);
-  $('sensitivity').value = Math.round(state.sensitivity * 100);
-  $('offset').value = state.offset;
-  showOffset();
-  syncUI();
-})();
-
 // Resume audio if iOS suspended the context while the app was in the background.
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && actx && actx.state !== 'running' && !audio.paused) actx.resume();
 });
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
-}

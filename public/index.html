@@ -11,10 +11,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Pulse">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <canvas id="stage" aria-label="Pulsing image"></canvas>
@@ -36,6 +36,12 @@
   </label>
 
   <p id="status" class="status" aria-live="polite"></p>
+
+  <button type="button" class="pick details-pick" id="detailsBtnSetup">
+    <span class="thumb">✎</span>
+    <span class="txt"><b>Song details</b><small id="detailsSummary">Optional · shown on the video and share page</small></span>
+  </button>
+
   <button id="startBtn" class="primary" disabled>Start</button>
 </main>
 
@@ -78,16 +84,64 @@
     <button class="chip" data-fx="strobe">Strobe</button>
     <button class="chip" data-fx="round">Circle</button>
   </div>
-  <div class="row">
-    <button id="recordBtn">● Record</button>
+  <div class="row actions">
+    <button id="recordBtn">● Rec</button>
+    <button id="shareBtn" class="accent">Share</button>
+    <button id="detailsBtn">Details</button>
     <button id="hideBtn">Hide</button>
     <button id="newBtn">New</button>
   </div>
 </section>
 
+<div class="sheet" id="detailsSheet" hidden>
+  <form class="panel sheet-card" id="detailsForm" novalidate>
+    <h2>Song details</h2>
+    <p class="note" id="detailsNote" hidden></p>
+    <label class="field">Song name <input id="d_title" maxlength="120" autocomplete="off" required></label>
+    <label class="field">Artist name <input id="d_artist" maxlength="120" autocomplete="off" required></label>
+    <label class="field">Album <span class="opt">optional</span> <input id="d_album" maxlength="120" autocomplete="off"></label>
+    <label class="field">Artist website <span class="opt">optional</span> <input id="d_website" type="url" inputmode="url" maxlength="300" placeholder="example.com" autocomplete="url"></label>
+    <label class="check"><input type="checkbox" id="d_showCredits" checked> Show song name and artist on the video</label>
+    <div class="row">
+      <button type="button" data-close>Cancel</button>
+      <button type="submit" class="primary">Save</button>
+    </div>
+  </form>
+</div>
+
+<div class="sheet" id="shareSheet" hidden>
+  <div class="panel sheet-card">
+    <h2>Share link</h2>
+    <p class="share-what"><b id="shareTitle"></b><br><span id="shareSub"></span></p>
+    <form id="shareForm">
+      <p class="note">Creates a page anyone with the link can open to watch and hear this song with your effects. The picture and song are uploaded.</p>
+      <label class="check"><input type="checkbox" id="s_rights" required> I own this music or have permission to share it</label>
+      <div id="shareProgress" class="progress" hidden>
+        <div class="bar"><span id="shareProgressBar"></span></div>
+        <small id="shareProgressLabel">Uploading…</small>
+      </div>
+      <p class="error" id="shareError" role="alert" hidden></p>
+      <div class="row">
+        <button type="button" data-close>Cancel</button>
+        <button type="submit" class="primary" id="shareCreate">Create link</button>
+      </div>
+    </form>
+    <div id="shareDone" hidden>
+      <input id="shareLink" class="link" readonly aria-label="Share link" onclick="this.select()">
+      <div class="row">
+        <button type="button" id="shareCopy">Copy</button>
+        <button type="button" id="shareNative" class="accent">Share…</button>
+        <a class="btn" id="shareOpen" target="_blank" rel="noopener">Open</a>
+      </div>
+      <div class="row"><button type="button" data-close>Done</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="toast" role="status" hidden></div>
 
 <audio id="audio" preload="auto" playsinline></audio>
-<script src="app.js"></script>
+<script src="/engine.js"></script>
+<script src="/app.js"></script>
 </body>
 </html>

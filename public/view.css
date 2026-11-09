@@ -1,0 +1,20 @@
+/* Share page */
+.view-card { padding: 14px 16px; }
+.view-card .row { margin: 6px 0; }
+.view-card .meta { min-width: 0; flex: 1; }
+.view-card h1 { margin: 0; font-size: 20px; line-height: 1.2; color: var(--text); background: none; -webkit-text-fill-color: currentColor;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0; }
+.view-card .meta p { margin: 2px 0 0; color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.view-card .meta p span { opacity: .8; }
+.links > * { flex: 1; }
+.made { margin: 8px 0 0; text-align: center; font-size: 12px; color: var(--muted); }
+.made a { color: var(--text); }
+
+.big-play { position: fixed; z-index: 5; left: 50%; top: 38%; transform: translate(-50%, -50%); width: 92px; height: 92px; padding: 0;
+  border-radius: 50%; border: 0; font-size: 34px; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 10px 40px rgba(255, 61, 127, .45); animation: breathe 1.6s ease-in-out infinite; }
+.big-play span { margin-left: 6px; }
+.big-play[hidden] { display: none; }
+@keyframes breathe { 50% { transform: translate(-50%, -50%) scale(1.07); } }
+@media (prefers-reduced-motion: reduce) { .big-play { animation: none; } }
+body.view #setup .btn { margin-top: 8px; width: 100%; }

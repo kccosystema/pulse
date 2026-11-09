@@ -1,6 +1,6 @@
 // Offline cache for the Pulse app shell. Bump VERSION when files change.
-const VERSION = 'pulse-v4';
-const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'beat-worker.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+const VERSION = 'pulse-v5';
+const SHELL = ['/', '/index.html', '/style.css', '/engine.js', '/app.js', '/beat-worker.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -17,13 +17,16 @@ self.addEventListener('activate', (e) => {
 // Network first (so updates land), falling back to cache when offline.
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  // Share pages, API calls and media are always live, never cached here.
+  if (/^\/(api|s|m)\//.test(url.pathname)) return;
   e.respondWith(
     fetch(req)
       .then((res) => {
         if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); }
         return res;
       })
-      .catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match('index.html')))
+      .catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match('/index.html')))
   );
 });

@@ -1,8 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "echo 'static app, no build'",
-  "installCommand": "echo 'no install'",
-  "outputDirectory": ".",
+  "outputDirectory": "public",
+  "rewrites": [{ "source": "/s/:id", "destination": "/api/view?id=:id" }],
   "headers": [
     { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
   ]

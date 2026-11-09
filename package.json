@@ -1,0 +1,16 @@
+{
+  "name": "pulse",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "vendor": "esbuild scripts/blob-client-entry.js --bundle --format=esm --minify --target=es2019 --outfile=public/vendor/blob-client.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "2.8.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "engines": { "node": ">=20" }
+}
