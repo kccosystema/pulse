@@ -4,8 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>PulsePic</title>
-<meta name="description" content="Make any image pulse to the beat of a song.">
-<meta name="robots" content="noindex">
+<meta name="description" content="Make any picture pulse to the beat of a song. Add your track, pick your effects, then share a link or save the video.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PulsePic">
+<meta property="og:title" content="PulsePic — make any picture pulse to the beat">
+<meta property="og:description" content="Add a picture and a song. PulsePic finds the beat and brings your picture to life. Share it as a link or save the video.">
+<meta property="og:url" content="https://pulsepic.com/">
+<meta property="og:image" content="https://pulsepic.com/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://pulsepic.com/img/og.jpg">
 <meta name="theme-color" content="#0b0b10">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -16,13 +25,30 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body class="home">
 <canvas id="stage" aria-label="Pulsing image"></canvas>
 <button id="acctBtn" class="acct-btn" hidden>Sign in</button>
 
+<div id="homePage">
+  <header class="hero">
+    <div class="hero-art">
+      <canvas id="heroCanvas" role="img" aria-label="PulsePic artwork pulsing to a beat"></canvas>
+      <img id="heroImg" src="/img/hero.jpg" alt="" width="1080" height="1080" fetchpriority="high" hidden>
+    </div>
+  </header>
+
+  <section class="intro">
+    <h1 class="tagline">Make any picture <span>pulse to the beat.</span></h1>
+    <p class="lead">Add a picture and a song. PulsePic finds the beat and brings your picture to life, ready to share as a link or save as a video for Instagram and TikTok.</p>
+    <a class="try-now" href="#setup">
+      <span>Try now</span>
+      <svg class="arrow" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 4v15m0 0-6-6m6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </section>
+
 <main id="setup" class="panel">
-  <h1>PulsePic</h1>
-  <p class="sub">Pick a picture and a song. The picture pulses to the beat.</p>
+  <h2 class="setup-title">Try it now</h2>
+  <p class="sub">Pick a picture and a song. Everything stays on your phone until you share.</p>
 
   <label class="pick" id="pickImage">
     <input type="file" accept="image/*" id="imageInput" hidden>
@@ -45,6 +71,18 @@
 
   <button id="startBtn" class="primary" disabled>Start</button>
 </main>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><b>Pick a picture</b><span>Cover art, a photo, a flyer.</span></li>
+      <li><b>Add your song</b><span>MP3 or a studio WAV. We find the beat.</span></li>
+      <li><b>Share or record</b><span>Get a link, or save a video.</span></li>
+    </ol>
+  </section>
+
+  <footer class="home-foot">© PulsePic · <a href="https://pulsepic.com">pulsepic.com</a></footer>
+</div>
 
 <section id="player" class="panel bottom" hidden>
   <div class="row">
@@ -179,5 +217,6 @@
 <script src="/engine.js"></script>
 <script src="/auth.js"></script>
 <script src="/app.js"></script>
+<script src="/home.js"></script>
 </body>
 </html>

@@ -126,8 +126,7 @@ function updateBpm() {
 $('startBtn').addEventListener('click', async () => {
   initAudio();
   await actx.resume();
-  $('setup').hidden = true;
-  $('player').hidden = false;
+  enterPlayer();
   updateBpm();
   play();
 });
@@ -211,8 +210,7 @@ canvas.addEventListener('click', () => $('player').classList.remove('hidden-ui')
 $('newBtn').addEventListener('click', () => {
   if (state.recorder) stopRecording();
   audio.pause();
-  $('player').hidden = true;
-  $('setup').hidden = false;
+  goHome();
 });
 
 // Record: a one-time gentle nudge to sign in; recording works either way.
@@ -601,6 +599,21 @@ function save() {
   applyDetails();
 })();
 
+// ───────────────────────── home page ↔ player ─────────────────────────
+
+function enterPlayer() {
+  document.body.classList.remove('home');
+  $('player').hidden = false;
+  window.scrollTo(0, 0);
+  resize();
+}
+
+function goHome() {
+  $('player').hidden = true;
+  document.body.classList.add('home');
+  requestAnimationFrame(() => $('setup').scrollIntoView({ block: 'start' }));
+}
+
 // ───────────────────────── accounts ─────────────────────────
 
 // What to keep if the user leaves for Google/Apple sign-in.
@@ -638,8 +651,7 @@ async function restoreDraft() {
   if (typeof d.showCredits === 'boolean') state.showCredits = d.showCredits;
   applyDetails();
   if (d.shareLink) { state.shareLink = d.shareLink.url; state.shareId = d.shareLink.id; state.shareExpires = d.shareLink.expiresAt; }
-  $('setup').hidden = true;
-  $('player').hidden = false;
+  enterPlayer();
   updateBpm();
   if (d.pending === 'share') openShare();
   else if (account.user) toast('Signed in. Tap Rec to record.');

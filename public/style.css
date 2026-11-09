@@ -130,3 +130,50 @@ button.wide { width: 100%; margin: 4px 0 6px; }
 .link-actions { display: flex; gap: 6px; }
 .link-actions > * { flex: 1; font-size: 13px; padding: 6px 4px; }
 button.danger { color: #ff8a9b; border-color: rgba(255, 138, 155, .4); }
+
+/* ───────── home page (body.home); the player keeps the fixed full-screen layout ───────── */
+body.home { height: auto; min-height: 100%; overflow-x: hidden; overflow-y: auto; }
+body.home #stage, body.home #player { display: none; }
+body:not(.home) #homePage { display: none; }
+html:has(body.home) { height: auto; overflow-y: auto; }
+
+#homePage { position: relative; z-index: 1; max-width: 640px; margin: 0 auto;
+  padding: calc(58px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); }
+body.home .acct-btn { position: absolute; }
+#homePage::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(60% 40% at 50% 0%, rgba(255, 61, 127, .22), transparent 70%),
+              radial-gradient(50% 35% at 80% 60%, rgba(124, 92, 255, .18), transparent 70%); }
+
+.hero-art { width: min(100%, 560px, calc(100svh - 330px)); min-width: min(100%, 200px); aspect-ratio: 1; margin: 0 auto; }
+.hero-art canvas { width: 100%; height: 100%; display: block; }
+
+.intro { text-align: center; margin: 14px 0 0; }
+.tagline { font-size: clamp(30px, 8.6vw, 46px); line-height: 1.05; letter-spacing: -0.025em; margin: 0 0 10px; color: var(--text); }
+.tagline span { display: block; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { font-size: 16.5px; line-height: 1.45; color: #cfcfdb; margin: 0 auto 6px; max-width: 32em; }
+.how { margin-top: 30px; }
+.how h2 { font-size: 22px; margin: 0 0 12px; text-align: center; }
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; text-align: left; counter-reset: step; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 34px 1fr; column-gap: 12px; align-items: center;
+  padding: 12px 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
+.steps li::before { content: counter(step); grid-row: span 2; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.steps b { font-size: 16px; }
+.steps span { color: var(--muted); font-size: 14px; }
+
+.try-now { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text); text-decoration: none;
+  font-weight: 700; font-size: 18px; letter-spacing: .02em; padding: 8px 18px; }
+.try-now .arrow { color: var(--accent); animation: nudge 1.4s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(255, 61, 127, .6)); }
+@keyframes nudge { 0%, 100% { transform: translateY(0); opacity: .8; } 50% { transform: translateY(9px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .try-now .arrow { animation: none; } }
+
+body.home #setup { position: static; transform: none; left: auto; top: auto; width: 100%; margin: 26px auto 0; scroll-margin-top: 70px; }
+.setup-title { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.02em; }
+.home-foot { text-align: center; color: var(--muted); font-size: 13px; margin-top: 28px; }
+.home-foot a { color: var(--muted); }
+@media (max-height: 640px) {
+  #homePage { padding-top: calc(52px + env(safe-area-inset-top)); }
+  .tagline { font-size: 27px; margin-bottom: 6px; }
+  .lead { font-size: 14.5px; line-height: 1.4; }
+  .try-now { padding-top: 4px; font-size: 16px; }
+}
