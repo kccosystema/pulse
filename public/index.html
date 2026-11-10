@@ -248,7 +248,7 @@
     <div id="exportRun" hidden>
       <div class="export-preview" id="exportPreview"></div>
       <div class="progress"><div class="bar"><span id="exportBar"></span></div><small id="exportLabel">Recording…</small></div>
-      <p class="note">Records in real time. Keep PulsePic open until it finishes.</p>
+      <p class="note" id="exportRunNote">Keep PulsePic open until it finishes.</p>
       <div class="row"><button type="button" id="exportCancel">Cancel</button></div>
     </div>
     <div id="exportDone" hidden>
@@ -296,6 +296,7 @@
 
 <audio id="audio" preload="auto" playsinline></audio>
 <script src="/engine.js"></script>
+<script src="/fast-export.js"></script>
 <script src="/auth.js"></script>
 <script src="/app.js"></script>
 <script src="/home.js"></script>

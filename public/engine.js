@@ -309,10 +309,18 @@ window.addEventListener('resize', resize);
 resize();
 
 let lastFrame = performance.now();
+let offline = false; // true while a fast export drives the frames itself
+
+function decay(dt) {
+  state.pulse *= Math.exp(-dt / 0.14);
+  flash *= Math.exp(-dt / 0.08);
+  strobe *= Math.exp(-dt / 0.05);
+}
 
 function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000);
   lastFrame = now;
+  if (offline) { requestAnimationFrame(frame); return; }
 
   if (actx && !audio.paused) {
     if (state.analysis) dispatch(heardTime(now), now);
@@ -322,9 +330,7 @@ function frame(now) {
     state.level *= 0.9;
     for (let i = 0; i < bars.length; i++) bars[i] *= 0.9;
   }
-  state.pulse *= Math.exp(-dt / 0.14);
-  flash *= Math.exp(-dt / 0.08);
-  strobe *= Math.exp(-dt / 0.05);
+  decay(dt);
 
   draw(now, dt);
   engine.onFrame();
@@ -334,7 +340,11 @@ function frame(now) {
 // Bass level (for a gentle continuous breathing) and spectrum bars.
 function updateLevels() {
   analyser.getByteFrequencyData(freq);
-  const binHz = actx.sampleRate / analyser.fftSize;
+  levelsFrom(freq, actx.sampleRate / analyser.fftSize);
+}
+
+// Shared by live playback (analyser bytes) and fast export (precomputed bytes).
+function levelsFrom(freq, binHz) {
   let bass = 0, nb = 0;
   for (let i = Math.max(1, Math.floor(40 / binHz)); i <= Math.ceil(160 / binHz); i++) { bass += freq[i]; nb++; }
   state.level += (Math.min(1, bass / nb / 255) - state.level) * 0.2;

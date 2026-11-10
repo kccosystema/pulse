@@ -1,6 +1,6 @@
 // Offline cache for the PulsePic app shell. Bump VERSION when files change.
-const VERSION = 'pulse-v13';
-const SHELL = ['/', '/index.html', '/style.css', '/engine.js', '/auth.js', '/app.js', '/home.js', '/img/hero.jpg', '/beat-worker.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
+const VERSION = 'pulse-v14';
+const SHELL = ['/', '/index.html', '/style.css', '/engine.js', '/fast-export.js', '/auth.js', '/app.js', '/home.js', '/img/hero.jpg', '/beat-worker.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

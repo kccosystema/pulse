@@ -794,20 +794,47 @@ $('exportStart').addEventListener('click', async () => {
   if (!len) return;
   showExportStep('exportRun');
   $('exportBar').style.width = '0%';
-  $('exportLabel').textContent = `Recording 0:00 / ${fmt(len)}`;
+  $('exportRunNote').textContent = 'Keep PulsePic open until it finishes.';
+  const onCanvas = (c) => $('exportPreview').replaceChildren(c);
   let result;
   try {
-    result = await exportVideo({
-      width: f.w, height: f.h, start, duration: len,
-      onCanvas: (c) => $('exportPreview').replaceChildren(c),
-      onProgress: (t) => {
-        $('exportBar').style.width = `${Math.min(100, (t / len) * 100)}%`;
-        $('exportLabel').textContent = `Recording ${fmt(Math.min(t, len))} / ${fmt(len)}`;
-      },
-    });
+    // Fast path: render + hardware-encode without playing (needs the beat map).
+    $('exportLabel').textContent = 'Preparing…';
+    let slowDevice = false;
+    try { slowDevice = localStorage.getItem('pulse:fastExport') === 'slow'; } catch {}
+    const mb = state.analysis && !slowDevice ? await fastExportSupport(f.w, f.h) : null;
+    if (mb) {
+      const t0 = performance.now();
+      try {
+        result = await exportVideoFast(mb, {
+          width: f.w, height: f.h, start, duration: len, onCanvas,
+          onProgress: (p) => {
+            $('exportBar').style.width = `${Math.round(p * 100)}%`;
+            $('exportLabel').textContent = `Making your video… ${Math.round(p * 100)}%`;
+          },
+        });
+        if (result) console.info(`fast export: ${len.toFixed(1)} s video in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+      } catch (err) {
+        console.warn('fast export failed, recording in real time instead', err);
+        if (err && err.tooSlow) { try { localStorage.setItem('pulse:fastExport', 'slow'); } catch {} }
+        result = undefined;
+      }
+    }
+    // Fallback: play the clip and record it in real time.
+    if (result === undefined) {
+      $('exportRunNote').textContent = 'Records in real time. Keep PulsePic open until it finishes.';
+      $('exportLabel').textContent = `Recording 0:00 / ${fmt(len)}`;
+      result = await exportVideo({
+        width: f.w, height: f.h, start, duration: len, onCanvas,
+        onProgress: (t) => {
+          $('exportBar').style.width = `${Math.min(100, (t / len) * 100)}%`;
+          $('exportLabel').textContent = `Recording ${fmt(Math.min(t, len))} / ${fmt(len)}`;
+        },
+      });
+    }
   } catch (err) {
     console.warn('export failed', err);
-    toast('Could not record the video on this browser');
+    toast('Could not make the video on this browser');
     showExportStep('exportSetup');
     return;
   } finally {
@@ -841,7 +868,7 @@ function showExportDone(r, f) {
     ? 'Tap Share / Save → Instagram to post it, or Save Video to keep it in Photos.'
     : 'Tap Share / Save → Instagram to post it, or Download to keep it on your phone.';
   $('exportShare').hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
-  $('exportCodecNote').hidden = canExportMp4();
+  $('exportCodecNote').hidden = r.fast || canExportMp4();
   showExportStep('exportDone');
 }
 

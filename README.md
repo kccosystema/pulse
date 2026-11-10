@@ -12,7 +12,7 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 - **Offset:** shifts the visuals later if they come before the sound, which is common with Bluetooth headphones (try +150 to +250 ms).
 - **Effects:** Glow, Shake, Flash, Tilt, Bounce, Echo, Rings, Sparks, RGB split, Bars, Strobe (bar starts), Circle.
 - **Presets:** Chill, Club, Hype.
-- **🎬 Video (export):** 1080p MP4 in **Story/Reel 9:16**, **Square 1:1** or **Feed 4:5**, for **15/30/60/90 s or the full song**, starting wherever the song is. It renders off-screen at full resolution in real time, with a live preview and cancel, and keeps the picture and credits clear of Instagram's interface. There's an optional "Made with PulsePic.com" line. **Share / Save video** opens the phone's share sheet (Instagram, Save to Photos). Instagram needs H.264 MP4, which Safari on iOS and Chrome on Android produce; other browsers get a warning.
+- **🎬 Video (export):** 1080p MP4 in **Story/Reel 9:16**, **Square 1:1** or **Feed 4:5**, for **15/30/60/90 s or the full song**, starting wherever the song is. It renders off-screen at full resolution, **faster than real time** where the phone has a hardware encoder (`public/fast-export.js`: WebCodecs H.264 + AAC, muxed to MP4 with Mediabunny; a WebAssembly AAC encoder add-on fills in where the browser lacks AAC). Phones without hardware encoding fall back to real-time recording (`exportVideo` in `engine.js`); that is detected in the first 1.5 s and remembered. There's a live preview and cancel, and it and keeps the picture and credits clear of Instagram's interface. There's an optional "Made with PulsePic.com" line. **Share / Save video** opens the phone's share sheet (Instagram, Save to Photos). Instagram needs H.264 MP4, which Safari on iOS and Chrome on Android produce; other browsers get a warning.
 - **Details:** song name, artist, album and artist website. These fill in from the song file's tags or a file name like `Artist - Song.mp3`.
 - **Share:** uploads the cover and song and creates a link (`/s/<id>`) to a landing page. The page shows the pulsing picture with your effects, a Play button, the song details and the artist website. Texts and social apps show a preview card with the cover.
   Studio files (WAV, AIFF, FLAC) and anything over 40 MB are converted to a 192 kbps MP3 on the phone before uploading. That's about 7× smaller, so share pages load quickly. The cap is 15 minutes per song.
@@ -29,7 +29,7 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `public/view.js`, `public/view.css` | Share page player |
 | `public/encode-worker.js` | Converts big or lossless songs to MP3 before sharing (LAME via WebAssembly) |
 | `public/sw.js` | Offline cache. **Bump `VERSION` whenever you change a file in `public/`.** |
-| `public/vendor/` | Bundled Vercel Blob upload client and MP3 encoder (`npm run vendor` regenerates them) |
+| `public/vendor/` | Bundled Vercel Blob upload client, MP3 encoder, Mediabunny and its AAC encoder (`npm run vendor` regenerates them) |
 | `api/upload.js` | Grants the browser permission to upload the cover and song straight to Vercel Blob |
 | `api/share.js` | Checks and saves a share (details, effect settings, beat map) |
 | `api/view.js` + `lib/view-template.js` | Renders `/s/<id>` with link-preview tags |
