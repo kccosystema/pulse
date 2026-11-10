@@ -3,6 +3,10 @@
   "outputDirectory": "public",
   "rewrites": [
     {
+      "source": "/api/admin/:section",
+      "destination": "/api/admin?section=:section"
+    },
+    {
       "source": "/s/:id",
       "destination": "/api/view?id=:id"
     },

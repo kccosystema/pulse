@@ -165,7 +165,7 @@ async function claimGuestLinks() {
   const list = guestLinks();
   if (!list.length || !account.user) return [];
   try {
-    const res = await authFetch('/api/claim', {
+    const res = await authFetch('/api/links', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ claims: list.map(({ id, token }) => ({ id, token })) }),

@@ -67,6 +67,9 @@ http.createServer(async (req, res) => {
       await mkdir(path.dirname(path.join(DATA, named)), { recursive: true });
       await writeFile(path.join(DATA, named), await readBody(req));
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ url: `/m/${named}`, pathname: named }));
+    } else if (p.startsWith('/api/admin/')) {
+      url.searchParams.set('section', p.split('/')[3] || '');
+      await callApi('admin', req, res, new URL(`/api/admin?${url.searchParams}`, url));
     } else if (p.startsWith('/api/')) {
       await callApi(p.slice(5).replace(/\/$/, ''), req, res, url);
     } else if (/^\/s\/[A-Za-z0-9]+$/.test(p)) {

@@ -36,9 +36,9 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `api/media.js` | Same-origin fallback for streaming a shared song |
 | `api/config.js` | Tells the app whether sharing and sign-in are set up |
 | `api/plays.js`, `lib/counter.js`, `lib/db.js` | Play counts in Postgres |
-| `api/admin/*`, `lib/admin.js`, `public/admin/` | Admin dashboard (admin email only) |
+| `api/admin.js`, `lib/admin*.js`, `public/admin/` | Admin dashboard (admin email only). One function behind `/api/admin/<section>`, because Vercel Hobby allows 12 functions |
 | `api/me.js`, `api/track.js`, `lib/analytics.js` | User records and privacy-friendly event counts |
-| `api/claim.js`, `api/links.js`, `api/cleanup.js` | Claim guest links, list and delete a user's links, daily expiry cleanup |
+| `api/links.js`, `api/cleanup.js` | List, delete and claim a user's links; daily expiry cleanup |
 | `lib/auth.js`, `lib/shares.js` | Clerk token checks; share ownership, expiry and deletion |
 | `public/auth.js` | Sign-in, account button and My links, keeping work across sign-in |
 
