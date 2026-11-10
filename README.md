@@ -12,7 +12,7 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 - **Offset:** shifts the visuals later if they come before the sound, which is common with Bluetooth headphones (try +150 to +250 ms).
 - **Effects:** Glow, Shake, Flash, Tilt, Bounce, Echo, Rings, Sparks, RGB split, Bars, Strobe (bar starts), Circle.
 - **Presets:** Chill, Club, Hype.
-- **Record:** saves or shares the result as a video (song name and artist included when shown).
+- **🎬 Video (export):** 1080p MP4 in **Story/Reel 9:16**, **Square 1:1** or **Feed 4:5**, for **15/30/60/90 s or the full song**, starting wherever the song is. It renders off-screen at full resolution in real time, with a live preview and cancel, and keeps the picture and credits clear of Instagram's interface. There's an optional "Made with PulsePic.com" line. **Share / Save video** opens the phone's share sheet (Instagram, Save to Photos). Instagram needs H.264 MP4, which Safari on iOS and Chrome on Android produce; other browsers get a warning.
 - **Details:** song name, artist, album and artist website. These fill in from the song file's tags or a file name like `Artist - Song.mp3`.
 - **Share:** uploads the cover and song and creates a link (`/s/<id>`) to a landing page. The page shows the pulsing picture with your effects, a Play button, the song details and the artist website. Texts and social apps show a preview card with the cover.
   Studio files (WAV, AIFF, FLAC) and anything over 40 MB are converted to a 192 kbps MP3 on the phone before uploading. That's about 7× smaller, so share pages load quickly. The cap is 15 minutes per song.

@@ -8,10 +8,8 @@ engine.areaHeight = () => {
   return panel.hidden || panel.classList.contains('hidden-ui') ? H : panel.getBoundingClientRect().top;
 };
 engine.onFrame = () => updateTime();
-engine.onRecordChange = (on) => {
-  $('recordBtn').textContent = on ? '■ Stop' : '● Rec';
-  $('recordBtn').classList.toggle('rec', on);
-};
+engine.onRecordChange = (on) => { $('recordBtn').classList.toggle('rec', on); };
+engine.watermark = true;
 
 const PRESETS = {
   chill: { intensity: 0.3, fx: ['glow', 'rings', 'echo'] },
@@ -135,7 +133,6 @@ $('startBtn').addEventListener('click', async () => {
 $('playBtn').addEventListener('click', () => { initAudio(); if (audio.paused) play(); else audio.pause(); });
 audio.addEventListener('play', () => { $('playBtn').textContent = '❚❚'; $('playBtn').ariaLabel = 'Pause'; });
 audio.addEventListener('pause', () => { $('playBtn').textContent = '▶'; $('playBtn').ariaLabel = 'Play'; });
-audio.addEventListener('ended', () => { if (state.recorder) stopRecording(); });
 
 let seeking = false;
 $('seek').addEventListener('input', () => {
@@ -215,20 +212,17 @@ $('newBtn').addEventListener('click', () => {
   goHome();
 });
 
-// Record: a one-time gentle nudge to sign in; recording works either way.
+// Video: a one-time gentle nudge to sign in; exporting works either way.
 $('recordBtn').addEventListener('click', () => {
-  if (state.recorder) { stopRecording(); return; }
   let nagged = false;
   try { nagged = sessionStorage.getItem('pulse:recNag') === '1'; } catch {}
   if (accountsEnabled() && !account.user && !nagged) { $('recordSheet').hidden = false; return; }
-  initAudio();
-  startRecording();
+  openExport();
 });
 $('recordSkip').addEventListener('click', () => {
   try { sessionStorage.setItem('pulse:recNag', '1'); } catch {}
   closeSheets();
-  initAudio();
-  startRecording();
+  openExport();
 });
 $('recordSignIn').addEventListener('click', () => { closeSheets(); startSignIn('record'); });
 
@@ -742,6 +736,125 @@ $('saveForm').addEventListener('submit', async (e) => {
 $('saveCopy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('saveLink').value); toast('Link copied'); } catch { toast($('saveLink').value); }
 });
+
+// ───────────────────────── export video ─────────────────────────
+// 1080p MP4 for Instagram Stories/Reels (9:16), square or 4:5 feed posts, or
+// TikTok. Records from wherever the song is now, for the chosen length.
+
+const FORMATS = {
+  story: { w: 1080, h: 1920, name: 'story' },
+  square: { w: 1080, h: 1080, name: 'square' },
+  portrait: { w: 1080, h: 1350, name: 'feed' },
+};
+let exportFmt = 'story', exportLen = 30, exportResult = null;
+
+function exportRange() {
+  const dur = isFinite(audio.duration) ? audio.duration : 0;
+  let start = audio.currentTime || 0;
+  if (!dur || start >= dur - 1) start = 0;
+  const left = Math.max(0, dur - start);
+  return { start, len: exportLen === 'full' ? left : Math.min(exportLen, left) };
+}
+
+function showExportStep(step) {
+  for (const id of ['exportSetup', 'exportRun', 'exportDone']) $(id).hidden = id !== step;
+}
+
+function updateExportSetup() {
+  document.querySelectorAll('[data-fmt]').forEach((b) => b.classList.toggle('on', b.dataset.fmt === exportFmt));
+  document.querySelectorAll('[data-len]').forEach((b) => b.classList.toggle('on', String(exportLen) === b.dataset.len));
+  const { start, len } = exportRange();
+  $('exportRange').textContent = len
+    ? `Starts at ${fmt(start)} and runs ${Math.round(len)} s. To start somewhere else, close this and drag the song slider first.`
+    : 'The song hasn’t loaded yet. Try again in a moment.';
+  $('exportStart').disabled = !len;
+  $('exportFormatNote').hidden = canExportMp4();
+}
+
+function openExport() {
+  if (!canExportVideo()) { toast('This browser can’t export video. Try Safari on iPhone or Chrome on Android.'); return; }
+  initAudio();
+  audio.pause();
+  $('exWatermark').checked = engine.watermark;
+  showExportStep('exportSetup');
+  updateExportSetup();
+  $('exportSheet').hidden = false;
+}
+
+document.querySelectorAll('[data-fmt]').forEach((b) => b.addEventListener('click', () => { exportFmt = b.dataset.fmt; updateExportSetup(); }));
+document.querySelectorAll('[data-len]').forEach((b) => b.addEventListener('click', () => {
+  exportLen = b.dataset.len === 'full' ? 'full' : +b.dataset.len;
+  updateExportSetup();
+}));
+$('exWatermark').addEventListener('change', (e) => { engine.watermark = e.target.checked; });
+
+$('exportStart').addEventListener('click', async () => {
+  const f = FORMATS[exportFmt];
+  const { start, len } = exportRange();
+  if (!len) return;
+  showExportStep('exportRun');
+  $('exportBar').style.width = '0%';
+  $('exportLabel').textContent = `Recording 0:00 / ${fmt(len)}`;
+  let result;
+  try {
+    result = await exportVideo({
+      width: f.w, height: f.h, start, duration: len,
+      onCanvas: (c) => $('exportPreview').replaceChildren(c),
+      onProgress: (t) => {
+        $('exportBar').style.width = `${Math.min(100, (t / len) * 100)}%`;
+        $('exportLabel').textContent = `Recording ${fmt(Math.min(t, len))} / ${fmt(len)}`;
+      },
+    });
+  } catch (err) {
+    console.warn('export failed', err);
+    toast('Could not record the video on this browser');
+    showExportStep('exportSetup');
+    return;
+  } finally {
+    $('exportPreview').replaceChildren();
+  }
+  if (!result) { showExportStep('exportSetup'); updateExportSetup(); return; }
+  showExportDone(result, f);
+});
+
+$('exportCancel').addEventListener('click', () => stopRecording());
+// Closing the sheet while recording cancels it.
+$('exportSheet').querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => stopRecording()));
+
+function exportFileName(f, type) {
+  const base = [details.artist, details.title].filter(Boolean).join(' - ') || 'pulsepic';
+  const slug = base.normalize('NFKD').replace(/[^\w -]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'pulsepic';
+  return `${slug}-${f.name}.${type.includes('mp4') ? 'mp4' : 'webm'}`;
+}
+
+function showExportDone(r, f) {
+  if (exportResult) URL.revokeObjectURL(exportResult.url);
+  const file = new File([r.blob], exportFileName(f, r.type), { type: r.type });
+  exportResult = { file, url: URL.createObjectURL(r.blob) };
+  $('exportVideo').src = exportResult.url;
+  $('exportDownload').href = exportResult.url;
+  $('exportDownload').download = file.name;
+  const mb = (r.blob.size / 1048576).toFixed(1);
+  $('exportInfo').textContent = `${r.type.includes('mp4') ? 'MP4' : 'WebM'} · ${r.width}×${r.height} · ${Math.round(r.seconds)} s · ${mb} MB`;
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  $('exportTip').textContent = ios
+    ? 'Tap Share / Save → Instagram to post it, or Save Video to keep it in Photos.'
+    : 'Tap Share / Save → Instagram to post it, or Download to keep it on your phone.';
+  $('exportShare').hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
+  $('exportCodecNote').hidden = canExportMp4();
+  showExportStep('exportDone');
+}
+
+// Must run straight from the tap (share sheets need a fresh user gesture).
+$('exportShare').addEventListener('click', async () => {
+  if (!exportResult) return;
+  try {
+    await navigator.share({ files: [exportResult.file], title: details.title || 'PulsePic' });
+  } catch (err) {
+    if (err.name !== 'AbortError') $('exportDownload').click();
+  }
+});
+$('exportAgain').addEventListener('click', () => { showExportStep('exportSetup'); updateExportSetup(); });
 
 // ───────────────────────── home page ↔ player ─────────────────────────
 

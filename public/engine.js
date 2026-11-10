@@ -260,12 +260,12 @@ function emitSparks(s, down) {
   const { cx, cy, w, h } = layout;
   for (let i = 0; i < n && sparks.length < 400; i++) {
     const a = Math.random() * Math.PI * 2;
-    const speed = (180 + Math.random() * 420) * (0.6 + state.intensity) * s;
+    const speed = (180 + Math.random() * 420) * U * (0.6 + state.intensity) * s;
     sparks.push({
       x: cx + Math.cos(a) * w * 0.5, y: cy + Math.sin(a) * h * 0.5,
       vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
       life: 0, max: 0.5 + Math.random() * 0.7,
-      size: 1.5 + Math.random() * 3.5,
+      size: (1.5 + Math.random() * 3.5) * U,
       hue: (state.hue + Math.random() * 60 - 30 + 360) % 360,
     });
   }
@@ -273,8 +273,33 @@ function emitSparks(s, down) {
 
 // ───────────────────────── rendering ─────────────────────────
 
-let W = 0, H = 0, DPR = 1;
+// Drawing normally goes to the on-screen canvas; video export swaps in an
+// off-screen 1080p canvas (setRenderTarget). U scales pixel sizes (sparks,
+// text, line widths) so a 1080-wide video looks like the phone screen.
+let W = 0, H = 0, DPR = 1, U = 1;
+let rc = ctx;            // current render context
+let exportCanvas = null; // set while exporting
+let glowScale = 1;       // shadowBlur ignores transforms; keep glow proportional
+
+function setRenderTarget(cnv) {
+  rings.length = 0; echoes.length = 0; sparks.length = 0; // positions are per-target
+  if (cnv) {
+    exportCanvas = cnv;
+    rc = cnv.getContext('2d');
+    W = cnv.width; H = cnv.height; DPR = 1;
+    U = Math.min(W, H) / 390;
+    glowScale = U * 2;    // match a 2× phone screen
+  } else {
+    exportCanvas = null;
+    rc = ctx;
+    resize();
+  }
+}
+
 function resize() {
+  if (exportCanvas) return;
+  U = 1;
+  glowScale = 1;
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
   canvas.width = Math.round(W * DPR);
@@ -326,7 +351,7 @@ function updateLevels() {
 }
 
 function draw(now, dt) {
-  const c = ctx;
+  const c = rc;
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
   c.globalCompositeOperation = 'source-over';
   c.fillStyle = '#0b0b10';
@@ -354,7 +379,7 @@ function draw(now, dt) {
 
   // Fit into the page's picture area (the whole screen while recording),
   // leaving room underneath for the song credits when they are shown.
-  const areaH = state.recorder ? H : Math.max(H * 0.35, Math.min(H, engine.areaHeight()));
+  const areaH = exportCanvas ? H : Math.max(H * 0.35, Math.min(H, engine.areaHeight()));
   const credits = state.showCredits && state.credits && (state.credits.title || state.credits.artist) ? state.credits : null;
   const font = creditFont();
   const creditH = credits ? 18 + font.big * 1.25 + (credits.artist || credits.album ? font.small * 1.3 : 0) + 8 : 0;
@@ -370,7 +395,7 @@ function draw(now, dt) {
   let cx = W / 2, cy = baseCy;
   if (fx.bounce) cy -= h * 0.12 * k * p;
   if (fx.shake && p > 0.05) {
-    const s = 16 * k * p;
+    const s = 16 * U * k * p;
     cx += (Math.random() * 2 - 1) * s;
     cy += (Math.random() * 2 - 1) * s;
   }
@@ -389,7 +414,7 @@ function draw(now, dt) {
   c.scale(scale, scale);
   if (fx.glow) {
     c.shadowColor = `hsla(${state.hue}, 95%, 60%, ${0.35 + 0.6 * p})`;
-    c.shadowBlur = 20 + 90 * p * (0.4 + k);
+    c.shadowBlur = (20 + 90 * p * (0.4 + k)) * glowScale;
   }
   roundRect(c, -w / 2, -h / 2, w, h, r);
   c.fillStyle = '#000';
@@ -398,7 +423,7 @@ function draw(now, dt) {
   c.clip();
   if (fx.rgb && p > 0.04) {
     if (!state.channels) state.channels = makeChannels(img);
-    const off = ((4 + 18 * k) * p) / scale;
+    const off = ((4 + 18 * k) * p * U) / scale;
     c.globalCompositeOperation = 'lighter';
     drawSource(c, state.channels[0], -off, -off * 0.3, w, h, fx.round);
     drawSource(c, state.channels[1], 0, 0, w, h, fx.round);
@@ -409,7 +434,8 @@ function draw(now, dt) {
   }
   c.restore();
 
-  if (credits) drawCredits(c, credits, baseCy + h / 2 + 18, font);
+  if (credits) drawCredits(c, credits, baseCy + h / 2 + 18 * U, font);
+  if (exportCanvas && engine.watermark) drawWatermark(c, credits ? baseCy + h / 2 + 18 * U + font.big * 1.25 + font.small * 1.3 + 14 * U : baseCy + h / 2 + 22 * U);
   if (sparks.length) drawSparks(c, dt);
 
   if (flash > 0.02) {
@@ -425,8 +451,19 @@ function draw(now, dt) {
 }
 
 // Song title / artist / album under the picture (also lands in recorded videos).
+// Small "Made with PulsePic" line under the credits in exported videos.
+function drawWatermark(c, y) {
+  c.save();
+  c.textAlign = 'center';
+  c.textBaseline = 'top';
+  c.font = `600 ${Math.round(11 * U)}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  c.fillStyle = 'rgba(255,255,255,0.55)';
+  c.fillText('Made with PulsePic.com', W / 2, Math.min(y, H - 40 * U));
+  c.restore();
+}
+
 function creditFont() {
-  const big = Math.round(Math.max(16, Math.min(30, W * 0.055)));
+  const big = Math.round(Math.max(16 * U, Math.min(30 * U, W * 0.055)));
   return { big, small: Math.round(big * 0.62) };
 }
 
@@ -436,7 +473,7 @@ function drawCredits(c, cr, top, { big, small }) {
   c.textAlign = 'center';
   c.textBaseline = 'top';
   c.shadowColor = 'rgba(0,0,0,0.6)';
-  c.shadowBlur = 8;
+  c.shadowBlur = 8 * glowScale;
   let y = top;
   if (cr.title) {
     c.font = `700 ${big}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
@@ -499,7 +536,7 @@ function drawRings(c, now, cx, cy, w, h, r) {
     if (age >= 1) { rings.splice(i, 1); continue; }
     const e = reach * (1 - Math.pow(1 - age, 3));
     c.strokeStyle = `hsla(${g.hue}, 95%, 65%, ${0.85 * (1 - age) * g.s})`;
-    c.lineWidth = 2 + 6 * (1 - age);
+    c.lineWidth = (2 + 6 * (1 - age)) * U;
     roundRect(c, cx - w / 2 - e, cy - h / 2 - e, w + 2 * e, h + 2 * e, r + e);
     c.stroke();
   }
@@ -512,7 +549,7 @@ function drawBars(c, cx, cy, w, h, round, areaH) {
   const k = state.intensity;
   c.save();
   if (round) {
-    const R = w / 2 + 6;
+    const R = w / 2 + 6 * U;
     const total = n * 2;
     c.lineCap = 'round';
     c.lineWidth = Math.max(2, ((2 * Math.PI * R) / total) * 0.55);
@@ -547,7 +584,7 @@ function drawSparks(c, dt) {
     const s = sparks[i];
     s.life += dt;
     if (s.life >= s.max) { sparks.splice(i, 1); continue; }
-    s.vx *= 0.97; s.vy = s.vy * 0.97 + 300 * dt;
+    s.vx *= 0.97; s.vy = s.vy * 0.97 + 300 * U * dt;
     s.x += s.vx * dt; s.y += s.vy * dt;
     const f = 1 - s.life / s.max;
     c.fillStyle = `hsla(${s.hue}, 100%, 65%, ${f})`;
@@ -590,64 +627,97 @@ function play() {
 // ───────────────────────── recording ─────────────────────────
 // Records the canvas + song to a video you can save or share.
 
+// Instagram, TikTok etc. want MP4 (H.264 + AAC). Safari records that; Chrome
+// does on recent versions; otherwise we fall back to WebM.
+const VIDEO_TYPES = [
+  'video/mp4;codecs=avc1.640028,mp4a.40.2',
+  'video/mp4;codecs=avc1.4d0028,mp4a.40.2',
+  'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+  'video/mp4;codecs=avc1,mp4a',
+  'video/mp4',
+  'video/webm;codecs=vp9,opus',
+  'video/webm;codecs=vp8,opus',
+  'video/webm',
+];
 function pickMime() {
-  const types = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-  return types.find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+  return VIDEO_TYPES.find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
 }
+// True only when the browser can record H.264 + AAC MP4 (what Instagram
+// accepts). A bare "video/mp4" can mean VP9 inside MP4 on some builds.
+const canExportMp4 = () => !!window.MediaRecorder && VIDEO_TYPES.slice(0, 4).some((t) => MediaRecorder.isTypeSupported(t));
+const canExportVideo = () => !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream);
 
-function startRecording() {
-  if (!canvas.captureStream || !window.MediaRecorder || !recDest) {
-    toast('Video recording is not supported in this browser');
-    return;
-  }
-  const stream = canvas.captureStream(30);
-  recDest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
-  const mimeType = pickMime();
-  let rec;
-  try {
-    rec = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 6_000_000 } : undefined);
-  } catch {
-    toast('Could not start recording');
-    return;
-  }
-  const chunks = [];
-  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-  rec.onstop = () => {
-    stream.getVideoTracks().forEach((t) => t.stop());
-    const type = rec.mimeType || mimeType || 'video/webm';
-    finishVideo(new Blob(chunks, { type }), type);
-  };
-  state.recorder = rec;
-  audio.currentTime = 0;
-  rec.start(1000);
-  play();
-  engine.onRecordChange(true);
-  toast('Recording… plays to the end, or tap Stop');
+// Renders the picture + effects into an off-screen canvas of the given size
+// while the song plays from `start` for `duration` seconds, recording it with
+// the song's audio. Real time: a 30 s clip takes 30 s.
+//   onCanvas(canvas) – show it as a live preview
+//   onProgress(seconds)
+// Resolves { blob, type, width, height, seconds } or null if cancelled.
+let exportJob = null;
+
+function exportVideo({ width, height, start, duration, onCanvas, onProgress }) {
+  return new Promise((resolve, reject) => {
+    if (!canExportVideo() || !recDest) { reject(new Error('unsupported')); return; }
+    const cnv = document.createElement('canvas');
+    cnv.width = width;
+    cnv.height = height;
+    setRenderTarget(cnv);
+    if (onCanvas) onCanvas(cnv);
+
+    const stream = cnv.captureStream(30);
+    recDest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+    const mimeType = pickMime();
+    let rec;
+    try {
+      rec = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        videoBitsPerSecond: Math.round(width * height * 30 * 0.13), // ≈8 Mbps at 1080×1920
+        audioBitsPerSecond: 192000,
+      });
+    } catch (err) {
+      setRenderTarget(null);
+      reject(err);
+      return;
+    }
+    const chunks = [];
+    let cancelled = false, timer = 0, began = 0;
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onstop = () => {
+      clearInterval(timer);
+      audio.pause();
+      stream.getVideoTracks().forEach((t) => t.stop());
+      state.recorder = null;
+      exportJob = null;
+      setRenderTarget(null);
+      engine.onRecordChange(false);
+      if (cancelled) { resolve(null); return; }
+      const type = (rec.mimeType || mimeType || 'video/webm').split(';')[0];
+      resolve({ blob: new Blob(chunks, { type }), type, width, height, seconds: Math.max(0, audio.currentTime - began) });
+    };
+    const finish = () => { if (rec.state !== 'inactive') rec.stop(); };
+    exportJob = { cancel() { cancelled = true; finish(); } };
+
+    const go = () => {
+      began = audio.currentTime;
+      state.recorder = rec;
+      engine.onRecordChange(true);
+      rec.start(1000);
+      play();
+      timer = setInterval(() => {
+        const t = audio.currentTime - began;
+        if (onProgress) onProgress(Math.max(0, t));
+        if (t >= duration || audio.ended) finish();
+      }, 100);
+    };
+    if (Math.abs(audio.currentTime - start) > 0.05) {
+      audio.addEventListener('seeked', go, { once: true });
+      audio.currentTime = start;
+    } else go();
+  });
 }
 
 function stopRecording() {
-  const rec = state.recorder;
-  state.recorder = null;
-  engine.onRecordChange(false);
-  if (rec && rec.state !== 'inactive') rec.stop();
-  audio.pause();
-}
-
-async function finishVideo(blob, type) {
-  const ext = type.includes('mp4') ? 'mp4' : 'webm';
-  const file = new File([blob], `pulsepic-${Date.now()}.${ext}`, { type });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'PulsePic' }); return; }
-    catch (e) { if (e.name === 'AbortError') return; }
-  }
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = file.name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-  toast('Video saved');
+  if (exportJob) exportJob.cancel();
 }
 
 // ───────────────────────── misc ─────────────────────────

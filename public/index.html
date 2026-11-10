@@ -124,7 +124,7 @@
     <button class="chip" data-fx="round">Circle</button>
   </div>
   <div class="row actions">
-    <button id="recordBtn">● Rec</button>
+    <button id="recordBtn">🎬 Video</button>
     <button id="shareBtn" class="accent">Share</button>
     <button id="detailsBtn">Details</button>
     <button id="hideBtn">Hide</button>
@@ -218,10 +218,58 @@
   </div>
 </div>
 
+<div class="sheet" id="exportSheet" hidden>
+  <div class="panel sheet-card">
+    <h2>Export video</h2>
+    <div id="exportSetup">
+      <p class="note">Saves an MP4 you can post to Instagram Stories, Reels or TikTok.</p>
+      <div class="opt-label">Format</div>
+      <div class="row seg">
+        <button type="button" data-fmt="story">Story / Reel<small>9:16</small></button>
+        <button type="button" data-fmt="square">Square<small>1:1</small></button>
+        <button type="button" data-fmt="portrait">Feed<small>4:5</small></button>
+      </div>
+      <div class="opt-label">Length</div>
+      <div class="row seg">
+        <button type="button" data-len="15">15s</button>
+        <button type="button" data-len="30">30s</button>
+        <button type="button" data-len="60">60s</button>
+        <button type="button" data-len="90">90s</button>
+        <button type="button" data-len="full">Full</button>
+      </div>
+      <p class="note" id="exportRange"></p>
+      <label class="check"><input type="checkbox" id="exWatermark" checked> Add “Made with PulsePic.com”</label>
+      <p class="error" id="exportFormatNote" hidden>This browser saves WebM, which Instagram doesn’t accept. For Instagram, use Safari on iPhone or Chrome on Android.</p>
+      <div class="row">
+        <button type="button" data-close>Cancel</button>
+        <button type="button" class="primary" id="exportStart">Record video</button>
+      </div>
+    </div>
+    <div id="exportRun" hidden>
+      <div class="export-preview" id="exportPreview"></div>
+      <div class="progress"><div class="bar"><span id="exportBar"></span></div><small id="exportLabel">Recording…</small></div>
+      <p class="note">Records in real time. Keep PulsePic open until it finishes.</p>
+      <div class="row"><button type="button" id="exportCancel">Cancel</button></div>
+    </div>
+    <div id="exportDone" hidden>
+      <video id="exportVideo" class="export-video" playsinline controls></video>
+      <p class="note" id="exportInfo"></p>
+      <p class="error" id="exportCodecNote" hidden>This browser can’t make the kind of MP4 Instagram accepts. For Instagram, export from Safari on iPhone or Chrome on Android.</p>
+      <button type="button" class="accent wide" id="exportShare">Share / Save video</button>
+      <a class="btn wide" id="exportDownload" download>Download</a>
+      <p class="note" id="exportTip"></p>
+      <div class="row">
+        <button type="button" id="exportAgain">Export another</button>
+        <button type="button" data-close>Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="recordSheet" hidden>
   <div class="panel sheet-card">
     <h2>Save your work</h2>
-    <p class="note">Sign in with Google or Apple to keep your share links and find them again later. Recording works either way.</p>
+    <p class="note">Sign in with Google or Apple to keep your share links and find them again later. Exporting works either way.</p>
     <div class="row">
       <button type="button" id="recordSkip">Not now</button>
       <button type="button" class="primary" id="recordSignIn">Sign in</button>
