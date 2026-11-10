@@ -42,6 +42,10 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `lib/auth.js`, `lib/shares.js` | Clerk token checks; share ownership, expiry and deletion |
 | `public/auth.js` | Sign-in, account button and My links, keeping work across sign-in |
 
+## Home page slider
+
+"Fresh on PulsePic" under the Try now arrow: an endless row of the newest 24 songs (`api/recent.js`, cached at the edge for 5 minutes). Each cover opens its share page in a new tab. Creators can opt out with **Show on the PulsePic homepage** in Share or Edit (`featured` on the share). Expired links are never shown. With reduced motion it becomes a swipeable row.
+
 ## Accounts and link expiry
 
 Sign-in uses **Clerk** (Google, Apple and others, set up in the Clerk dashboard). Only Clerk's *publishable* key is needed: set `CLERK_PUBLISHABLE_KEY` in Vercel, or put it in `lib/auth.js`. The server checks sign-ins against Clerk's public signing keys, so there is no secret key.

@@ -457,6 +457,7 @@ async function createShare(progress) {
     image: { url: img.url, width: cover.width, height: cover.height },
     audio: { url: up.url, type: song.type, duration: isFinite(audio.duration) ? audio.duration : null, delay: song.delay },
     settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode },
+    featured: $('s_feature').checked,
     analysis: r ? {
       bpm: r.bpm,
       beats: r.beats.map((t, i) => [+t.toFixed(3), +r.beatStrength[i].toFixed(2), (i - r.downPhase) % 4 === 0 ? 1 : 0]),
@@ -648,6 +649,7 @@ async function startEdit(id) {
     syncUI();
 
     editing = { id: m.id, url: `${location.origin}/s/${m.id}`, imageChanged: false };
+    $('e_feature').checked = m.featured !== false;
     state.shareLink = null;
     $('shareBtn').textContent = 'Save';
     enterPlayer();
@@ -712,6 +714,7 @@ $('saveForm').addEventListener('submit', async (e) => {
       body: JSON.stringify({
         title: details.title, artist: details.artist, album: details.album, website: details.website,
         settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode },
+        featured: $('e_feature').checked,
         image,
       }),
     });

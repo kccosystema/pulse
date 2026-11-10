@@ -138,3 +138,42 @@
   new MutationObserver(() => (document.body.classList.contains('home') ? (fit(), start()) : stop()))
     .observe(document.body, { attributes: true, attributeFilter: ['class'] });
 })();
+
+// ───────── "Fresh on PulsePic": endless row of the newest songs ─────────
+(async () => {
+  const section = document.getElementById('fresh');
+  const track = document.getElementById('freshTrack');
+  if (!section || !track) return;
+  let songs = [];
+  try { songs = (await fetch('/api/recent').then((r) => r.json())).songs || []; } catch {}
+  if (!songs.length) return;
+
+  const card = (s, copy) => {
+    const a = document.createElement('a');
+    a.className = 'fresh-card';
+    a.href = `/s/${encodeURIComponent(s.id)}`;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    if (copy) { a.tabIndex = -1; a.setAttribute('aria-hidden', 'true'); }
+    a.setAttribute('aria-label', `${s.title} by ${s.artist} (opens in a new tab)`);
+    const img = document.createElement('img');
+    img.src = s.image; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.width = 150; img.height = 150;
+    const t = document.createElement('b'); t.textContent = s.title;
+    const ar = document.createElement('span'); ar.textContent = s.artist;
+    a.append(img, t, ar);
+    return a;
+  };
+
+  // Repeat the list until one set is wider than the screen, then add a second
+  // identical set; sliding by exactly one set width loops seamlessly.
+  const set = document.createElement('div');
+  set.className = 'fresh-set';
+  const need = Math.max(1, Math.ceil((window.innerWidth + 200) / (songs.length * 166)));
+  for (let r = 0; r < need; r++) songs.forEach((s) => set.appendChild(card(s, r > 0)));
+  const copy = set.cloneNode(true);
+  copy.setAttribute('aria-hidden', 'true');
+  copy.querySelectorAll('a').forEach((a) => { a.tabIndex = -1; a.setAttribute('aria-hidden', 'true'); });
+  track.replaceChildren(set, copy);
+  track.style.setProperty('--fresh-duration', `${Math.max(20, set.children.length * 4)}s`);
+  section.hidden = false;
+})();

@@ -85,6 +85,7 @@ export async function POST(request) {
       delay: num(m.audio.delay, 0, 0.5, 0),
     },
     settings: cleanSettings(m.settings),
+    featured: m.featured !== false, // shown in the home page slider
     analysis: a && typeof a === 'object' ? {
       bpm: num(a.bpm, 30, 300, 120),
       beats: events(a.beats, 3, 20000),
@@ -147,6 +148,7 @@ export async function PATCH(request) {
   m.album = str(b.album, 120);
   m.website = website(b.website);
   if (b.settings) m.settings = cleanSettings(b.settings);
+  if (typeof b.featured === 'boolean') m.featured = b.featured;
   m.updatedAt = new Date().toISOString();
 
   await putJSON(sharePath(id), m, auth, { overwrite: true });

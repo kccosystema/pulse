@@ -193,3 +193,28 @@ a.btn.wide { display: flex; width: 100%; margin: 6px 0; box-sizing: border-box; 
 
 .free-note { margin: 0 auto 8px; max-width: 30em; text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .01em; color: #ffd39a; }
 @media (max-height: 640px) { .free-note { font-size: 12.5px; margin-bottom: 6px; } }
+
+/* "Fresh on PulsePic" slider */
+.fresh { margin: 22px -16px 4px; }
+.fresh h2 { text-align: center; font-size: 20px; margin: 0 0 12px; }
+.fresh-viewport { overflow: hidden; padding: 4px 0 8px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+.fresh-track { display: flex; width: max-content; animation: fresh-scroll var(--fresh-duration, 40s) linear infinite; }
+.fresh-viewport:hover .fresh-track, .fresh-track:focus-within { animation-play-state: paused; }
+.fresh-set { display: flex; gap: 16px; padding-right: 16px; }
+.fresh-card { width: 150px; flex: none; text-decoration: none; color: var(--text); }
+.fresh-card img { width: 150px; height: 150px; display: block; object-fit: cover; border-radius: 14px; background: #000;
+  border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.35); transition: transform .2s; }
+.fresh-card:hover img, .fresh-card:focus-visible img { transform: scale(1.04); }
+.fresh-card:focus-visible { outline: none; }
+.fresh-card:focus-visible img { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fresh-card b, .fresh-card span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+.fresh-card b { font-size: 14px; margin-top: 8px; }
+.fresh-card span { font-size: 12.5px; color: var(--muted); }
+@keyframes fresh-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .fresh-viewport { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+  .fresh-track { animation: none; }
+  .fresh-track > .fresh-set + .fresh-set { display: none; }
+}

@@ -47,6 +47,13 @@
     </a>
   </section>
 
+<section class="fresh" id="fresh" hidden aria-labelledby="freshTitle">
+    <h2 id="freshTitle">Fresh on PulsePic</h2>
+    <div class="fresh-viewport">
+      <div class="fresh-track" id="freshTrack"></div>
+    </div>
+  </section>
+
 <main id="setup" class="panel">
   <h2 class="setup-title">Try it now</h2>
   <p class="sub">Pick a picture and a song. Everything stays on your phone until you share.</p>
@@ -162,6 +169,7 @@
       <p class="note" id="shareOwnerNote" hidden>✓ Saved to your account. Links don’t expire.</p>
       <p class="note" id="shareGuestNote" hidden>Links are deleted after 30 days.</p>
       <label class="check"><input type="checkbox" id="s_rights" required> I own this music or have permission to share it</label>
+      <label class="check"><input type="checkbox" id="s_feature" checked> Show on the PulsePic homepage</label>
       <div id="shareProgress" class="progress" hidden>
         <div class="bar"><span id="shareProgressBar"></span></div>
         <small id="shareProgressLabel">Uploading…</small>
@@ -197,6 +205,7 @@
         <input type="file" accept="image/*" id="changePicInput" hidden>
       </div>
       <p class="note" id="savePicNote"></p>
+      <label class="check"><input type="checkbox" id="e_feature" checked> Show on the PulsePic homepage</label>
       <div id="saveProgress" class="progress" hidden>
         <div class="bar"><span id="saveProgressBar"></span></div>
         <small>Uploading picture…</small>
