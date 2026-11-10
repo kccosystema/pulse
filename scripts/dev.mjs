@@ -76,7 +76,9 @@ http.createServer(async (req, res) => {
       await sendFile(req, res, path.join(DATA, path.normalize(p.slice(3)).replace(/^(\.\.[/\\])+/, '')));
     } else {
       const rel = path.normalize(p).replace(/^(\.\.[/\\])+/, '');
-      await sendFile(req, res, path.join(PUBLIC, rel.endsWith('/') ? rel + 'index.html' : rel));
+      let file = path.join(PUBLIC, rel.endsWith('/') ? rel + 'index.html' : rel);
+      if ((await stat(file).catch(() => null))?.isDirectory()) file = path.join(file, 'index.html');
+      await sendFile(req, res, file);
     }
   } catch (err) {
     console.error(err);

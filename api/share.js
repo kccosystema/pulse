@@ -4,6 +4,7 @@ import { isOurMediaUrl, storageMode, blobAuth, getJSON, putJSON, deletePaths } f
 import { getUser } from '../lib/auth.js';
 import { saveNewShare, newClaimToken, hashToken, GUEST_DAYS, isShareId, sharePath, ownerIndexPath, indexEntry } from '../lib/shares.js';
 import { json } from '../lib/http.js';
+import { track } from '../lib/analytics.js';
 
 const FX = ['glow', 'shake', 'flash', 'tilt', 'bounce', 'echo', 'rings', 'sparks', 'rgb', 'bars', 'strobe', 'round'];
 const MAX_BODY = 1.5 * 1024 * 1024;
@@ -98,6 +99,7 @@ export async function POST(request) {
     console.error('share save failed', err);
     return json({ error: 'Could not save the share. Try again.' }, 500);
   }
+  await track('share_created', request, { shareId: id, userId: user ? user.userId : null });
   const origin = new URL(request.url).origin;
   return json({ id, url: `${origin}/s/${id}`, expiresAt: manifest.expiresAt, claimToken }, 201);
 }

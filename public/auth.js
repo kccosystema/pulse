@@ -22,6 +22,8 @@ const account = {
 
 function notifyAccount(prev) {
   updateAccountButton();
+  if (account.user && (!prev || prev.id !== account.user.id)) reportSignIn();
+  if (!account.user) { account.admin = false; $('adminLink').hidden = true; }
   for (const fn of account.listeners) { try { fn(account.user, prev); } catch (e) { console.error(e); } }
   if (account.user && !prev) claimGuestLinks();
 }
@@ -79,6 +81,21 @@ function clerkUser(u) {
   if (!u) return null;
   const email = u.primaryEmailAddress ? u.primaryEmailAddress.emailAddress : '';
   return { id: u.id, name: u.fullName || u.username || email || 'Account', email, imageUrl: u.imageUrl || null };
+}
+
+// Record the visit (admin Users list) and learn whether this is the admin.
+async function reportSignIn() {
+  const u = account.user;
+  try {
+    const res = await authFetch('/api/me', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: u.email, name: u.name, imageUrl: u.imageUrl }),
+    });
+    const r = await res.json();
+    account.admin = !!r.admin;
+    $('adminLink').hidden = !account.admin;
+  } catch {}
 }
 
 const accountsEnabled = () => account.mode === 'clerk' || account.mode === 'dev';

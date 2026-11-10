@@ -4,6 +4,7 @@
 import { counterMode, addPlay, getPlays } from '../lib/counter.js';
 import { isShareId } from '../lib/shares.js';
 import { json } from '../lib/http.js';
+import { track } from '../lib/analytics.js';
 
 export async function GET(request) {
   if (counterMode() === 'none') return json({ enabled: false, plays: {} });
@@ -22,7 +23,9 @@ export async function POST(request) {
   const id = new URL(request.url).searchParams.get('id');
   if (!isShareId(id)) return json({ error: 'Bad request' }, 400);
   try {
-    return json({ enabled: true, plays: await addPlay(id) });
+    const plays = await addPlay(id);
+    await track('play', request, { shareId: id });
+    return json({ enabled: true, plays });
   } catch (err) {
     console.error('play count failed', err);
     return json({ enabled: false }, 200);

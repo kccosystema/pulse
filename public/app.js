@@ -841,6 +841,7 @@ $('exportStart').addEventListener('click', async () => {
     $('exportPreview').replaceChildren();
   }
   if (!result) { showExportStep('exportSetup'); updateExportSetup(); return; }
+  trackEvent('export', editing ? editing.id : state.shareId);
   showExportDone(result, f);
 });
 
@@ -942,6 +943,14 @@ async function restoreDraft() {
 }
 
 initAccount().then(restoreDraft);
+
+// Anonymous page-view count for the admin dashboard.
+function trackEvent(type, id) {
+  try {
+    fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, id }), keepalive: true }).catch(() => {});
+  } catch {}
+}
+trackEvent('home_view');
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));

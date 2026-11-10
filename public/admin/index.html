@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PulsePic Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0b10">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body class="admin">
+<header class="adm-top">
+  <a href="/" class="adm-brand">PulsePic <span>Admin</span></a>
+  <span class="adm-who" id="who"></span>
+</header>
+
+<main class="adm-main">
+  <section id="gate" class="panel adm-gate">
+    <p id="gateMsg">Loading…</p>
+    <button type="button" class="primary" id="gateSignIn" hidden>Sign in</button>
+  </section>
+
+  <div id="app" hidden>
+    <nav class="adm-tabs" role="tablist">
+      <button type="button" role="tab" data-tab="analytics" class="on">Analytics</button>
+      <button type="button" role="tab" data-tab="songs">Songs</button>
+      <button type="button" role="tab" data-tab="users">Users</button>
+    </nav>
+
+    <section data-panel="analytics">
+      <div class="adm-bar">
+        <div class="adm-seg" id="range">
+          <button type="button" data-days="7">7 days</button>
+          <button type="button" data-days="30" class="on">30 days</button>
+          <button type="button" data-days="90">90 days</button>
+        </div>
+      </div>
+      <div class="adm-tiles" id="tiles"></div>
+      <p class="note" id="statsNote" hidden></p>
+      <div class="adm-charts" id="charts"></div>
+      <div class="adm-lists">
+        <div class="panel adm-card"><h3>Top songs <small>all-time plays</small></h3><div id="topSongs" class="adm-hbars"></div></div>
+        <div class="panel adm-card"><h3>Countries <small>views &amp; plays</small></h3><div id="countries" class="adm-hbars"></div></div>
+        <div class="panel adm-card"><h3>Devices <small>page views</small></h3><div id="devices" class="adm-hbars"></div></div>
+      </div>
+    </section>
+
+    <section data-panel="songs" hidden>
+      <div class="adm-bar">
+        <input type="search" id="songSearch" placeholder="Search songs, artists, owners…" aria-label="Search songs">
+        <select id="songSort" aria-label="Sort songs">
+          <option value="new">Newest</option>
+          <option value="plays">Most plays</option>
+          <option value="title">Title A–Z</option>
+        </select>
+      </div>
+      <p class="note" id="songCount"></p>
+      <div id="songs" class="adm-list"></div>
+    </section>
+
+    <section data-panel="users" hidden>
+      <div class="adm-bar">
+        <input type="search" id="userSearch" placeholder="Search name or email…" aria-label="Search users">
+      </div>
+      <p class="note" id="userCount"></p>
+      <div id="users" class="adm-list"></div>
+    </section>
+  </div>
+</main>
+
+<div id="tip" class="adm-tip" role="tooltip" hidden></div>
+<div id="toast" role="status" hidden></div>
+<script src="/admin/admin.js"></script>
+</body>
+</html>

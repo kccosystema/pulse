@@ -120,3 +120,6 @@ $('shareBtn').addEventListener('click', async () => {
   });
   audio.addEventListener('seeking', () => { lastT = null; });
 })();
+
+// Anonymous view count for the admin dashboard.
+fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'share_view', id: data.id }), keepalive: true }).catch(() => {});

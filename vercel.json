@@ -5,6 +5,10 @@
     {
       "source": "/s/:id",
       "destination": "/api/view?id=:id"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
     }
   ],
   "headers": [

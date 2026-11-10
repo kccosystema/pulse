@@ -35,7 +35,9 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `api/view.js` + `lib/view-template.js` | Renders `/s/<id>` with link-preview tags |
 | `api/media.js` | Same-origin fallback for streaming a shared song |
 | `api/config.js` | Tells the app whether sharing and sign-in are set up |
-| `api/plays.js`, `lib/counter.js` | Play counts (Neon Postgres or Upstash Redis) |
+| `api/plays.js`, `lib/counter.js`, `lib/db.js` | Play counts in Postgres |
+| `api/admin/*`, `lib/admin.js`, `public/admin/` | Admin dashboard (admin email only) |
+| `api/me.js`, `api/track.js`, `lib/analytics.js` | User records and privacy-friendly event counts |
 | `api/claim.js`, `api/links.js`, `api/cleanup.js` | Claim guest links, list and delete a user's links, daily expiry cleanup |
 | `lib/auth.js`, `lib/shares.js` | Clerk token checks; share ownership, expiry and deletion |
 | `public/auth.js` | Sign-in, account button and My links, keeping work across sign-in |
@@ -47,12 +49,24 @@ Sign-in uses **Clerk** (Google, Apple and others, set up in the Clerk dashboard)
 - **Signed in:** share links are permanent and listed under **My links** (copy, open, delete).
 - **Guest:** links last **30 days**. The browser keeps a secret claim token, so signing in later on the same device makes the guest's links permanent.
 - **Editing:** **My links → Edit** reopens a link in the player. You can change the details, effects and picture, and **Save** updates the same link in place (`PATCH /api/share`, owner only). The song and its beat map stay the same.
-- **Play counts:** share pages show "This has been jammed X times!". A play counts after 5 s of listening, once per browser per day. Counts live in **Neon Postgres** (Vercel → Storage → Neon, which sets `DATABASE_URL`; the `plays` table is created on first use) or **Upstash Redis** (`KV_REST_API_URL` / `KV_REST_API_TOKEN`). Without either, the badge is hidden.
+- **Play counts:** share pages show "This has been jammed X times!". A play counts after 5 s of listening, once per browser per day. Counts live in **Neon Postgres** (Vercel → Storage → Neon, which sets `DATABASE_URL`; the `plays` table is created on first use) Without it, the badge is hidden.
 - **Daily cleanup:** a Vercel Cron job (`api/cleanup`, 04:23 UTC) deletes expired guest links with their song and cover. Set `CRON_SECRET` to stop anyone else from triggering it. It only ever deletes expired links, so being triggered extra times is harmless.
 - **Sign-in leaves the page and comes back**, so the picture, song and details are saved in IndexedDB first and restored afterwards (`public/auth.js`).
 - **No key set:** the account button is hidden and every link is a 30-day guest link.
 
 Storage layout: `shares/<id>.json` (a share), `owners/<user>/<id>.json` (a user's links), `expiry/<date>/<id>` (guest links due on that date).
+
+## Admin
+
+**`/admin`** (not linked from the app; `noindex`) shows analytics, every song (plays, owner, open/copy/delete) and every user (links, plays, joined, last seen). Every `/api/admin/*` call checks on the server that the caller's **verified Clerk email** is in `ADMIN_EMAILS` (default in `lib/auth.js`). This needs the email in Clerk's session token: **Clerk dashboard → Sessions → Customize session token**:
+
+```json
+{ "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}", "image_url": "{{user.image_url}}" }
+```
+
+- **Users:** recorded in Postgres (`users` table) when a signed-in person opens the app (`api/me.js`). People who only signed in before this existed show up once they return.
+- **Analytics:** `events` table (`lib/analytics.js`). It stores the event type (home/share page view, play, link created, export, sign-up), the share/user id, the country from Vercel's edge, and phone vs desktop. There are no cookies, IPs or browser strings, and bots are skipped.
+- **Database:** `lib/db.js` uses Neon (`DATABASE_URL`) in production, or a local Postgres when `DATABASE_URL` points at localhost. Tables are created on first use.
 
 ## Sharing storage
 

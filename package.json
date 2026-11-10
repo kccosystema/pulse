@@ -15,6 +15,7 @@
     "@mediabunny/aac-encoder": "1.62.0",
     "esbuild": "0.28.2",
     "mediabunny": "1.62.0",
+    "pg": "8.23.1",
     "wasm-media-encoders": "0.7.0"
   },
   "engines": {
