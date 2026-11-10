@@ -42,6 +42,10 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `lib/auth.js`, `lib/shares.js` | Clerk token checks; share ownership, expiry and deletion |
 | `public/auth.js` | Sign-in, account button and My links, keeping work across sign-in |
 
+## Desktop visitors
+
+PulsePic is phone- and tablet-only. A small script in `index.html` runs before anything renders and marks desktops and laptops (no mobile browser, not an iPad, mouse or trackpad as the main pointer) with `html.desktop`. They get a "Made for your phone" page instead of the app: the animated artwork, a QR code to `pulsepic.com` (`npm run qr` regenerates `public/img/qr-pulsepic.svg`), a features grid and the Fresh slider. On desktop, sign-in never loads and the app never starts. **Share pages (`/s/…`) and `/admin` still work on desktop.** This is a front-end gate only; the APIs don't check the device.
+
 ## Home page slider
 
 "Fresh on PulsePic" under the Try now arrow: an endless row of the newest 24 songs (`api/recent.js`, cached at the edge for 5 minutes). Each cover opens its share page in a new tab. Creators can opt out with **Show on the PulsePic homepage** in Share or Edit (`featured` on the share). Expired links are never shown. With reduced motion it becomes a swipeable row.

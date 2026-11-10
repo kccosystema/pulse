@@ -945,7 +945,9 @@ async function restoreDraft() {
   else if (account.user) toast('Signed in. Tap Rec to record.');
 }
 
-initAccount().then(restoreDraft);
+// Desktop gets the "made for your phone" page: no sign-in, no app.
+const IS_DESKTOP = document.documentElement.classList.contains('desktop');
+if (!IS_DESKTOP) initAccount().then(restoreDraft);
 
 // Anonymous page-view count for the admin dashboard.
 function trackEvent(type, id) {

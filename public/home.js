@@ -1,8 +1,18 @@
+'use strict';
+
+// On desktop the hero artwork and the "Fresh" slider live in the desktop
+// landing page instead (one copy of each; moved before anything starts).
+if (document.documentElement.classList.contains('desktop')) {
+  const art = document.querySelector('.hero-art');
+  const fresh = document.getElementById('fresh');
+  if (art) document.getElementById('dtArt').appendChild(art);
+  if (fresh) document.getElementById('dtFresh').appendChild(fresh);
+}
+
 // Home page hero: the PulsePic artwork pulsing to a silent 120 BPM beat with
 // the same kinds of effects the app makes (zoom, colour-cycling glow, rings,
 // sparks on the downbeat). Pauses when scrolled away or the tab is hidden;
 // shows a still image for people who prefer reduced motion.
-'use strict';
 
 (() => {
   const cvs = document.getElementById('heroCanvas');
