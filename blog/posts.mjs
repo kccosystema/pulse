@@ -1,7 +1,7 @@
 // Blog posts: one per PulsePic feature. `npm run blog` turns these into static
 // pages in public/blog/ (plus the sitemap, RSS feed and llms.txt).
 //
-// Each post: slug (URL), title (H1), seoTitle (<title>, keep under ~60
+// Each post: slug (URL), icon (emoji fallback), image (optional icon art), title (H1), seoTitle (<title>, keep under ~60
 // chars), description (meta, under ~155 chars), answer (the "Quick answer"
 // at the top: a direct, self-contained reply to the question in the title,
 // which is what search snippets and AI assistants quote), body (HTML),
@@ -121,7 +121,7 @@ export const posts = [
 
   {
     slug: 'instagram-reels-stories-video',
-    icon: '🎬',
+    icon: '🎬', image: '/img/icons/video-export.webp',
     feature: 'Video export',
     title: 'How to Turn a Song and a Picture Into a Video for Instagram Reels, Stories and TikTok',
     seoTitle: 'Turn a Song and Picture Into an Instagram Reel',
@@ -176,7 +176,7 @@ export const posts = [
 
   {
     slug: 'share-song-link-with-artist-info',
-    icon: '🔗',
+    icon: '🔗', image: '/img/icons/share-links.webp',
     feature: 'Share links',
     title: 'How to Share Your Song as a Link With a Pulsing Picture and Artist Info',
     seoTitle: 'Share Your Song as a Link With Artist Info',
@@ -225,7 +225,7 @@ export const posts = [
 
   {
     slug: 'jam-counter-song-plays',
-    icon: '🔥',
+    icon: '🔥', image: '/img/icons/jam-counter.webp',
     feature: 'Jam counter',
     title: 'What "This Has Been Jammed X Times" Means: How PulsePic Counts Plays',
     seoTitle: 'How the PulsePic Jam Counter Counts Plays',
@@ -271,7 +271,7 @@ export const posts = [
 
   {
     slug: 'upload-wav-studio-files',
-    icon: '🎚️',
+    icon: '🎚️', image: '/img/icons/studio-files.webp',
     feature: 'Studio files',
     title: 'Can I Use a WAV File? Uploading Studio Masters to PulsePic',
     seoTitle: 'Can I Use a WAV File? Studio Masters on PulsePic',
@@ -317,7 +317,7 @@ export const posts = [
 
   {
     slug: 'edit-share-link-without-changing-url',
-    icon: '✏️',
+    icon: '✏️', image: '/img/icons/editing.webp',
     feature: 'Editing',
     title: 'How to Edit a PulsePic Share Link Without Changing the URL',
     seoTitle: 'Edit Your PulsePic Share Link, Keep the Same URL',

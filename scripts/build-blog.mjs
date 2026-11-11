@@ -18,6 +18,9 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const ld = (obj) => `<script type="application/ld+json">${JSON.stringify(obj).replace(/</g, '\\u003c')}</script>`;
 const url = (p) => `${SITE}/blog/${p.slug}`;
 const strip = (html) => html.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const icon = (p, size, cls = 'b-ico') => p.image
+  ? `<img class="${cls} b-img" src="${p.image}" width="${size}" height="${size}" alt="" loading="lazy">`
+  : `<span class="${cls}" aria-hidden="true">${p.icon}</span>`;
 const words = (p) => strip(p.answer + ' ' + p.body + ' ' + p.faqs.map((f) => f.q + ' ' + f.a).join(' ')).split(' ').length;
 const longDate = (d) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 
@@ -113,7 +116,7 @@ ${topBar}
   <nav class="b-crumbs" aria-label="Breadcrumb"><a href="/">PulsePic</a> › <a href="/blog">Blog</a> › <span>${esc(p.feature)}</span></nav>
   <article>
     <header class="b-head">
-      <span class="b-ico" aria-hidden="true">${p.icon}</span>
+      ${icon(p, 96)}
       <p class="b-kicker">${esc(p.feature)}</p>
       <h1>${esc(p.title)}</h1>
       <p class="b-meta">By the PulsePic Team · <time datetime="${date}">${longDate(date)}</time> · ${read} min read</p>
@@ -146,7 +149,7 @@ ${footer}
 
 function card(p) {
   return `      <a class="b-card" href="/blog/${p.slug}">
-        <span class="b-ico" aria-hidden="true">${p.icon}</span>
+        ${icon(p, 56)}
         <small>${esc(p.feature)}</small>
         <b>${esc(p.title)}</b>
         <span>${esc(p.description)}</span>

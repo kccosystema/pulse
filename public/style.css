@@ -161,6 +161,9 @@ body.home .acct-btn { position: absolute; }
   font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
 .steps b { font-size: 16px; }
 .steps span { color: var(--muted); font-size: 14px; }
+.steps.icons li { grid-template-columns: 52px 1fr; }
+.steps.icons li::before { content: none; }
+.steps.icons img { grid-row: span 2; width: 52px; height: 52px; filter: drop-shadow(0 4px 10px rgba(255, 61, 127, .35)); }
 
 .try-now { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text); text-decoration: none;
   font-weight: 700; font-size: 18px; letter-spacing: .02em; padding: 8px 18px; }
@@ -253,8 +256,9 @@ html.desktop .sheet { display: none !important; }
 .dt-features h2, #dtFresh .fresh h2 { font-size: 30px; letter-spacing: -0.02em; text-align: center; margin: 0 0 22px; }
 .dt-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .dt-grid article { padding: 20px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); }
-.dt-grid .ico { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; font-size: 22px;
+.dt-grid .ico { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 16px; font-size: 32px;
   background: linear-gradient(135deg, rgba(255, 61, 127, .25), rgba(124, 92, 255, .25)); }
+.dt-grid .ico-img { background: none; border-radius: 0; filter: drop-shadow(0 6px 14px rgba(255, 61, 127, .35)); }
 .dt-grid h3 { margin: 14px 0 6px; font-size: 17px; }
 .dt-grid p { margin: 0; color: #c3c3d0; font-size: 14.5px; line-height: 1.5; }
 #dtFresh .fresh { margin: 52px 0 0; }
