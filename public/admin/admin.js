@@ -280,6 +280,13 @@ function songRow(s) {
   row.innerHTML = `<img alt="" loading="lazy"><div class="main"><b></b><small></small></div>
     <div class="stats"><span>🔥 <b class="p"></b> plays</span><span>♥ <b class="lk"></b></span><span>💬 <b class="cm"></b></span><span class="who"></span><span class="when"></span></div>
     <div class="acts"><a class="btn" target="_blank" rel="noopener">Open</a><button type="button">Copy</button><button type="button" class="danger">Delete</button></div>`;
+  if (s.mine) {
+    const t = document.createElement('button');
+    t.type = 'button'; t.className = 'tools-btn'; t.textContent = '🛠 Tools';
+    t.setAttribute('aria-expanded', 'false');
+    row.querySelector('.acts').prepend(t);
+    t.onclick = () => toggleTools(row, s, t);
+  }
   row.querySelector('img').src = s.image || '';
   row.querySelector('.main b').textContent = s.title;
   row.querySelector('.main small').textContent = [s.artist, s.album].filter(Boolean).join(' · ');
@@ -298,7 +305,7 @@ function songRow(s) {
   who.appendChild(pill);
   row.querySelector('.when').textContent = `Created ${fmtDate(s.createdAt)}`;
   row.querySelector('a').href = s.url;
-  const [copy, del] = row.querySelectorAll('.acts button');
+  const [copy, del] = row.querySelectorAll('.acts button:not(.tools-btn)');
   copy.onclick = async () => { try { await navigator.clipboard.writeText(s.url); toast('Link copied'); } catch { toast(s.url); } };
   del.onclick = async () => {
     if (!confirm(`Delete “${s.title}” by ${s.artist}? The link stops working and its song and picture are removed. This can’t be undone.`)) return;
@@ -311,6 +318,91 @@ function songRow(s) {
     } catch { del.disabled = false; toast('Could not delete'); }
   };
   return row;
+}
+
+// ── Tools for your own songs: set the jam count, add comments under any name ──
+const FUNNY_NAMES = ['DJ Nova', 'Auntie Pam', 'BassHead420', 'Grandma Beats', 'Lil Subwoofer', 'Chef Remix', 'Professor Groove',
+  'Karen (manager)', 'Your Ex', 'Neighbor w/ Earplugs', 'Mr. Reverb', 'Disco Steve', 'Uber Driver Mike', 'The Cat', 'Tiny Tim Tempo',
+  'Coach Drop', 'Officer Funk', 'Mom', 'Sound Guy Gary', 'Barista Bri'];
+const FUNNY_TEXTS = ['my speakers filed a noise complaint 🔊', 'played this at a funeral and everyone started dancing',
+  'the bass rearranged my furniture', 'I was NOT ready for that drop 😭', 'my cat started bopping, this is a problem',
+  'put this on in the car and my GPS rerouted to the club', 'grandma just asked me to run it back', 'my neighbors know every word now',
+  'listened 47 times, still not tired', 'this beat should be illegal 🚨', 'cooked dinner to this and burned it. worth it',
+  'my headphones are begging for a break', 'the cover art pulsing is hypnotizing 😵‍💫', 'certified banger, no notes',
+  'this cured my Monday', 'I hit replay so hard my thumb hurts', 'my plants grew 3 inches from this vibe 🌱',
+  'just quit my job to dance full time', 'the 2am drive song we needed', 'turned it up and my car alarm joined in'];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+function toggleTools(row, s, btn) {
+  const open = row.querySelector('.tools');
+  if (open) { open.remove(); btn.setAttribute('aria-expanded', 'false'); return; }
+  btn.setAttribute('aria-expanded', 'true');
+  const box = document.createElement('div');
+  box.className = 'tools';
+  box.innerHTML = `
+    <form class="t-jams"><label>🔥 Jam count <input type="number" min="0" max="100000000" step="1" inputmode="numeric" required></label><button type="submit" class="accent">Save</button></form>
+    <form class="t-comment">
+      <div class="t-line"><input class="t-name" maxlength="40" placeholder="Display name" required aria-label="Display name"><button type="button" class="t-rand" title="Random funny comment">🎲 Random</button></div>
+      <textarea class="t-text" maxlength="500" rows="2" placeholder="Comment" required aria-label="Comment"></textarea>
+      <button type="submit" class="accent">Add comment</button>
+    </form>
+    <div class="t-list"><small>Loading comments…</small></div>`;
+  row.append(box);
+  const jamInput = box.querySelector('.t-jams input');
+  jamInput.value = s.plays;
+  box.querySelector('.t-jams').onsubmit = async (e) => {
+    e.preventDefault();
+    const b = e.target.querySelector('button'); b.disabled = true;
+    try {
+      const r = await api('/api/admin/jams', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id, count: Math.round(+jamInput.value) }) });
+      s.plays = r.plays; row.querySelector('.p').textContent = num(r.plays);
+      $('songCount').textContent = $('songCount').textContent.replace(/· [\d,]+ plays/, `· ${num(songs.reduce((t, x) => t + x.plays, 0))} plays`);
+      toast(`Jams set to ${num(r.plays)}`);
+    } catch (err) { toast(err.message || 'Could not save'); }
+    b.disabled = false;
+  };
+  const nameIn = box.querySelector('.t-name'), textIn = box.querySelector('.t-text');
+  box.querySelector('.t-rand').onclick = () => { nameIn.value = pick(FUNNY_NAMES); textIn.value = pick(FUNNY_TEXTS); };
+  box.querySelector('.t-comment').onsubmit = async (e) => {
+    e.preventDefault();
+    const b = e.target.querySelector('button[type=submit]'); b.disabled = true;
+    try {
+      await api('/api/admin/comment', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id, name: nameIn.value, text: textIn.value }) });
+      textIn.value = '';
+      s.comments = (s.comments || 0) + 1; row.querySelector('.cm').textContent = num(s.comments);
+      toast('Comment added');
+      loadToolComments(box, s, row);
+    } catch (err) { toast(err.message || 'Could not add'); }
+    b.disabled = false;
+  };
+  loadToolComments(box, s, row);
+}
+
+async function loadToolComments(box, s, row) {
+  const list = box.querySelector('.t-list');
+  try {
+    const r = await api(`/api/comments?id=${encodeURIComponent(s.id)}`);
+    const items = r.comments || [];
+    if (!items.length) { list.innerHTML = '<small>No comments yet.</small>'; return; }
+    list.replaceChildren(...items.map((c) => {
+      const el = document.createElement('div'); el.className = 't-item';
+      const t = document.createElement('div');
+      const n = document.createElement('b'); n.textContent = c.name;
+      const body = document.createElement('span'); body.textContent = c.body;
+      t.append(n, body);
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'danger'; del.textContent = 'Delete';
+      del.onclick = async () => {
+        if (!confirm(`Delete this comment by ${c.name}?`)) return;
+        try {
+          await api(`/api/comments?id=${encodeURIComponent(s.id)}&comment=${encodeURIComponent(c.id)}`, { method: 'DELETE' });
+          el.remove(); s.comments = Math.max(0, (s.comments || 1) - 1); row.querySelector('.cm').textContent = num(s.comments);
+          if (!list.children.length) list.innerHTML = '<small>No comments yet.</small>';
+        } catch (err) { toast(err.message || 'Could not delete'); }
+      };
+      el.append(t, del);
+      return el;
+    }));
+  } catch { list.innerHTML = '<small>Could not load comments.</small>'; }
 }
 
 // ───────────────────────── users ─────────────────────────

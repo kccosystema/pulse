@@ -2,7 +2,7 @@
 // /api/admin/<section> is rewritten here as ?section=<section> (vercel.json).
 // Every handler checks that the caller is the admin.
 import { statsGET } from '../lib/admin-stats.js';
-import { songsGET, songsDELETE } from '../lib/admin-songs.js';
+import { songsGET, songsDELETE, jamsPOST, commentPOST } from '../lib/admin-songs.js';
 import { usersGET } from '../lib/admin-users.js';
 import { json } from '../lib/http.js';
 
@@ -19,4 +19,12 @@ export function GET(request) {
 
 export function DELETE(request) {
   return section(request) === 'songs' ? songsDELETE(request) : json({ error: 'Not found' }, 404);
+}
+
+export function POST(request) {
+  switch (section(request)) {
+    case 'jams': return jamsPOST(request);
+    case 'comment': return commentPOST(request);
+    default: return json({ error: 'Not found' }, 404);
+  }
 }
