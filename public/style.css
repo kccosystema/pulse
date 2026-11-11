@@ -199,8 +199,8 @@ body.home #setup { position: static; transform: none; left: auto; top: auto; wid
 a.btn.wide { display: flex; width: 100%; margin: 6px 0; box-sizing: border-box; }
 #exportShare[hidden] { display: none; }
 
-.free-note { margin: 0 auto 8px; max-width: 30em; text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .01em; color: #ffd39a; }
-@media (max-height: 640px) { .free-note { font-size: 12.5px; margin-bottom: 6px; } }
+.free-note { margin: 0 auto 8px; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .01em; color: #fff; }
+@media (max-height: 640px) { .free-note { font-size: 10.5px; margin-bottom: 6px; } }
 
 /* "Fresh on PulsePic" slider */
 .fresh { margin: 22px -16px 4px; }
@@ -242,7 +242,7 @@ html.desktop .sheet { display: none !important; }
 .dt-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 0; }
 .dt-brand { font-weight: 800; font-size: 22px; letter-spacing: -0.02em;
   background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.dt-free { color: #ffd39a; font-weight: 700; font-size: 14px; }
+.dt-free { color: #fff; font-weight: 700; font-size: 14px; }
 .dt-brand { text-decoration: none; }
 .dt-nav { display: flex; gap: 20px; font-size: 15px; font-weight: 600; }
 .dt-nav a { color: var(--text); text-decoration: none; }
