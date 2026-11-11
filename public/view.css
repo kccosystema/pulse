@@ -30,3 +30,41 @@ body.view #setup .btn { margin-top: 8px; width: 100%; }
 .jams.bump { animation: jam-bump .6s ease-out; }
 @keyframes jam-bump { 0% { transform: translateX(-50%) scale(1); } 35% { transform: translateX(-50%) scale(1.12); } 100% { transform: translateX(-50%) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .jams.bump { animation: none; } }
+
+/* Likes + comments row under the picture */
+.social { gap: 10px; margin-top: 0 !important; }
+.social[hidden] { display: none; }
+.soc { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; font-size: 15px;
+  background: rgba(255, 255, 255, .06); }
+.soc svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; }
+.soc b { font-variant-numeric: tabular-nums; }
+.soc.like[aria-pressed="true"] { color: #ff5c8f; border-color: rgba(255, 61, 127, .55); background: rgba(255, 61, 127, .14); }
+.soc.like[aria-pressed="true"] svg { fill: currentColor; }
+.soc.like.pop svg { animation: heart-pop .45s ease-out; }
+@keyframes heart-pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .soc.like.pop svg { animation: none; } }
+
+/* Comments sheet */
+.comments-card { display: flex; flex-direction: column; max-height: min(78dvh, 640px); overflow: hidden; }
+.c-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.c-head h2 { margin: 0; }
+.c-head h2 span { color: var(--muted); font-weight: 500; font-size: 16px; }
+.c-close { width: 38px; height: 38px; padding: 0; border-radius: 50%; flex: none; }
+.c-list { flex: 1; overflow-y: auto; margin: 10px -4px; padding: 0 4px; min-height: 60px; overscroll-behavior: contain; }
+.c-empty { color: var(--muted); text-align: center; padding: 22px 0; font-size: 14px; }
+.c-item { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.c-item:last-child { border-bottom: 0; }
+.c-avatar { grid-row: span 2; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; display: grid; place-items: center;
+  font-weight: 700; font-size: 15px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.c-meta { font-size: 13px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-meta b { color: var(--text); margin-right: 6px; }
+.c-body { grid-column: 2 / 4; margin: 0; font-size: 15px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.c-del { grid-row: 1; grid-column: 3; padding: 2px 8px; font-size: 12px; border-radius: 8px; color: var(--muted); background: none; }
+.c-form textarea { width: 100%; font: inherit; font-size: 16px; color: var(--text); background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; resize: none; min-height: 48px; max-height: 140px; }
+.c-form textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.c-actions { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
+.c-actions small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.c-actions button { padding: 9px 22px; border-radius: 999px; }
+.c-form .note { margin: 0; font-size: 12px; }
+.c-signin .note { margin: 4px 0 8px; }

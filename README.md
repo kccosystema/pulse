@@ -94,3 +94,11 @@ Static, SEO/AEO-friendly blog at `/blog`, one post per feature.
 - Write or edit posts in `blog/posts.mjs` (each has a direct "Quick answer", question-style headings and FAQs). Keep claims true to the app.
 - Run `npm run blog` to regenerate `public/blog/**`, `public/blog/feed.xml`, `public/sitemap.xml`, `public/robots.txt` and `public/llms.txt`, then commit the output (Vercel has no build step).
 - Every post carries BlogPosting, BreadcrumbList and FAQPage structured data, a canonical URL, Open Graph tags and an RSS link. The blog isn't behind the desktop gate, so anyone can read it.
+
+## Likes and comments (share pages)
+
+Under the picture on every share page: a ♥ like button and a 💬 comments button.
+
+- **Likes** (`/api/likes`): anyone can like, once per song per day. The browser keeps an anonymous visitor id; on top of that each network address can add at most 5 likes per song per day, so clearing the browser doesn't allow spamming. Only salted, date-scoped hashes are stored (never raw addresses), and the daily cron prunes them after two days. Optional `PULSE_HASH_SALT` env var sets the salt.
+- **Comments** (`/api/comments`): anyone can read; posting needs sign-in (Clerk loads only when the comments sheet opens). Up to 500 characters, one comment per 10 s and 30 per day per user. Shown with the commenter's account name and picture. The author, the song's owner or an admin can delete a comment.
+- Stored in Postgres (`likes`, `like_marks`, `like_ips`, `comments`; created automatically). Deleting a link deletes its likes and comments. The admin Songs list shows likes and comments and can sort by them.

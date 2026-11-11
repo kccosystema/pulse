@@ -265,6 +265,8 @@ function renderSongs() {
   let list = songs.filter((s) => !q || [s.title, s.artist, s.album, s.owner?.email, s.owner?.name, s.id].join(' ').toLowerCase().includes(q));
   const sort = $('songSort').value;
   if (sort === 'plays') list = list.slice().sort((a, b) => b.plays - a.plays);
+  if (sort === 'likes') list = list.slice().sort((a, b) => (b.likes || 0) - (a.likes || 0));
+  if (sort === 'comments') list = list.slice().sort((a, b) => (b.comments || 0) - (a.comments || 0));
   if (sort === 'title') list = list.slice().sort((a, b) => a.title.localeCompare(b.title));
   $('songCount').textContent = `${list.length} of ${songs.length} songs · ${num(list.reduce((s, x) => s + x.plays, 0))} plays`;
   $('songs').replaceChildren(...list.map(songRow));
@@ -276,12 +278,14 @@ function songRow(s) {
   const row = document.createElement('div');
   row.className = 'adm-row';
   row.innerHTML = `<img alt="" loading="lazy"><div class="main"><b></b><small></small></div>
-    <div class="stats"><span>🔥 <b class="p"></b> plays</span><span class="who"></span><span class="when"></span></div>
+    <div class="stats"><span>🔥 <b class="p"></b> plays</span><span>♥ <b class="lk"></b></span><span>💬 <b class="cm"></b></span><span class="who"></span><span class="when"></span></div>
     <div class="acts"><a class="btn" target="_blank" rel="noopener">Open</a><button type="button">Copy</button><button type="button" class="danger">Delete</button></div>`;
   row.querySelector('img').src = s.image || '';
   row.querySelector('.main b').textContent = s.title;
   row.querySelector('.main small').textContent = [s.artist, s.album].filter(Boolean).join(' · ');
   row.querySelector('.p').textContent = num(s.plays);
+  row.querySelector('.lk').textContent = num(s.likes || 0);
+  row.querySelector('.cm').textContent = num(s.comments || 0);
   const who = row.querySelector('.who');
   const pill = document.createElement('span');
   if (s.owner) {

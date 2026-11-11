@@ -123,3 +123,259 @@ $('shareBtn').addEventListener('click', async () => {
 
 // Anonymous view count for the admin dashboard.
 fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'share_view', id: data.id }), keepalive: true }).catch(() => {});
+
+// ───────────────────────── likes + comments ─────────────────────────
+// Likes: anyone, once a day per song (the server also limits per network).
+// Comments: anyone can read; posting needs a sign-in (loaded only when the
+// comments sheet is opened, so the page stays light).
+(() => {
+  const CLERK_JS_VERSION = '6.40.1';
+  const CLERK_UI_VERSION = '1.41.2';
+  const id = encodeURIComponent(data.id);
+  const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  const ss = { get(k) { try { return sessionStorage.getItem(k); } catch { return null; } }, set(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} } };
+
+  // Anonymous visitor id for "one like per day".
+  let visitor = ls.get('pulse:vid');
+  if (!visitor || !/^[\w-]{8,64}$/.test(visitor)) {
+    visitor = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
+    ls.set('pulse:vid', visitor);
+  }
+
+  const likeBtn = $('likeBtn'), likeCount = $('likeCount'), commentCount = $('commentCount');
+  let liked = false, likes = 0, comments = 0, liking = false;
+  const showLikes = () => {
+    likeCount.textContent = likes.toLocaleString();
+    likeBtn.setAttribute('aria-pressed', String(liked));
+    likeBtn.setAttribute('aria-label', liked ? `Liked today · ${likes} likes` : `Like this song · ${likes} likes`);
+  };
+  const showComments = () => {
+    commentCount.textContent = comments.toLocaleString();
+    $('cTotal').textContent = comments ? `(${comments.toLocaleString()})` : '';
+  };
+
+  fetch(`/api/likes?id=${id}`, { cache: 'no-store', headers: { 'x-pulse-visitor': visitor } })
+    .then((r) => r.json())
+    .then((r) => {
+      if (!r.enabled) return;
+      likes = r.likes || 0; liked = !!r.likedToday; comments = r.comments || 0;
+      showLikes(); showComments();
+      $('social').hidden = false;
+      if (ss.get('pulse:openComments') === data.id) openComments();
+    })
+    .catch(() => {});
+
+  likeBtn.addEventListener('click', async () => {
+    if (liking) return;
+    if (liked) { toast('You already liked this today. Come back tomorrow! ❤️'); return; }
+    liking = true;
+    liked = true; likes++; showLikes();
+    likeBtn.classList.remove('pop'); void likeBtn.offsetWidth; likeBtn.classList.add('pop');
+    try {
+      const res = await fetch(`/api/likes?id=${id}`, { method: 'POST', headers: { 'x-pulse-visitor': visitor } });
+      const r = await res.json().catch(() => ({}));
+      if (typeof r.likes === 'number') likes = r.likes;
+      liked = res.ok ? true : !!r.likedToday;
+      if (!res.ok && r.error) toast(r.error);
+    } catch {
+      liked = false; likes = Math.max(0, likes - 1);
+      toast('Could not save your like. Check your connection.');
+    }
+    showLikes();
+    liking = false;
+  });
+
+  // ── sign-in (Clerk in production, a fake name on the local dev server) ──
+  const auth = { mode: null, user: null, loading: null };
+  const loadScript = (src, attrs = {}) => new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = true; s.crossOrigin = 'anonymous';
+    Object.assign(s.dataset, attrs);
+    s.onload = resolve; s.onerror = () => reject(new Error(`failed to load ${src}`));
+    document.head.appendChild(s);
+  });
+  function initAuth() {
+    auth.loading ||= (async () => {
+      const cfg = await fetch('/api/config').then((r) => r.json()).catch(() => ({}));
+      const a = cfg.auth || { mode: 'none' };
+      auth.mode = a.mode;
+      if (a.mode === 'clerk') {
+        try {
+          const base = `https://${a.frontendApi}/npm`;
+          await Promise.all([
+            loadScript(`${base}/@clerk/clerk-js@${CLERK_JS_VERSION}/dist/clerk.browser.js`, { clerkPublishableKey: a.publishableKey }),
+            loadScript(`${base}/@clerk/ui@${CLERK_UI_VERSION}/dist/ui.browser.js`),
+          ]);
+          await window.Clerk.load({ ui: { ClerkUI: window.__internal_ClerkUICtor } });
+          auth.user = window.Clerk.user ? { id: window.Clerk.user.id } : null;
+          window.Clerk.addListener(({ user }) => {
+            const had = !!auth.user;
+            auth.user = user ? { id: user.id } : null;
+            if (had !== !!auth.user) { renderComposer(); loadComments(); }
+          });
+        } catch (err) {
+          console.warn('sign-in unavailable', err);
+          auth.mode = 'unavailable';
+        }
+      } else if (a.mode === 'dev') {
+        const n = ls.get('pulse:devUser');
+        auth.user = n ? { id: `dev_${n}`, name: n } : null;
+      }
+    })();
+    return auth.loading;
+  }
+  async function token() {
+    if (!auth.user) return null;
+    if (auth.mode === 'clerk') { try { return await window.Clerk.session.getToken(); } catch { return null; } }
+    if (auth.mode === 'dev') return `dev:${auth.user.name}`;
+    return null;
+  }
+  async function authHeaders(extra = {}) {
+    const t = await token();
+    return t ? { ...extra, authorization: `Bearer ${t}` } : extra;
+  }
+  function signIn() {
+    if (auth.mode === 'clerk') {
+      ss.set('pulse:openComments', data.id); // reopen this sheet after the sign-in redirect
+      const back = location.href.split('#')[0];
+      try { window.Clerk.openSignIn({ forceRedirectUrl: back, signUpForceRedirectUrl: back }); }
+      catch { toast('Sign-in could not open. Please try again.'); }
+    } else if (auth.mode === 'dev') {
+      const n = (prompt('Dev sign-in — any name:') || '').trim().replace(/[^\w.-]/g, '').slice(0, 32);
+      if (!n) return;
+      ls.set('pulse:devUser', n);
+      auth.user = { id: `dev_${n}`, name: n };
+      renderComposer(); loadComments();
+    } else {
+      toast('Sign-in is unavailable right now');
+    }
+  }
+
+  // ── comments sheet ──
+  const sheet = $('commentsSheet'), list = $('cList'), err = $('cError');
+  const showErr = (msg) => { err.textContent = msg || ''; err.hidden = !msg; };
+
+  function ago(iso) {
+    const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+    if (s < 60) return 'just now';
+    const units = [[60, 'm'], [24, 'h'], [7, 'd'], [4.35, 'w'], [12, 'mo'], [Infinity, 'y']];
+    let v = s / 60;
+    for (const [n, u] of units) { if (v < n) return `${Math.floor(v)}${u} ago`; v /= n; }
+    return '';
+  }
+
+  function commentEl(c) {
+    const el = document.createElement('div');
+    el.className = 'c-item';
+    let av;
+    if (c.image) { av = document.createElement('img'); av.src = c.image; av.alt = ''; av.loading = 'lazy'; av.referrerPolicy = 'no-referrer'; }
+    else { av = document.createElement('span'); av.textContent = (c.name || '?').trim().charAt(0).toUpperCase(); av.setAttribute('aria-hidden', 'true'); }
+    av.className = 'c-avatar';
+    const meta = document.createElement('div');
+    meta.className = 'c-meta';
+    const nm = document.createElement('b'); nm.textContent = c.name;
+    const when = document.createElement('time'); when.dateTime = c.at; when.textContent = ago(c.at); when.title = new Date(c.at).toLocaleString();
+    meta.append(nm, when);
+    const body = document.createElement('p'); body.className = 'c-body'; body.textContent = c.body;
+    el.append(av, meta);
+    if (c.canDelete) {
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'c-del'; del.textContent = 'Delete';
+      del.setAttribute('aria-label', `Delete comment by ${c.name}`);
+      del.addEventListener('click', () => removeComment(c, el));
+      el.append(del);
+    }
+    el.append(body);
+    return el;
+  }
+
+  function renderList(items) {
+    list.replaceChildren(...(items.length ? items.map(commentEl) : [Object.assign(document.createElement('p'), { className: 'c-empty', textContent: 'No comments yet. Be the first!' })]));
+  }
+
+  let loadSeq = 0;
+  async function loadComments() {
+    const seq = ++loadSeq;
+    try {
+      const r = await fetch(`/api/comments?id=${id}`, { cache: 'no-store', headers: await authHeaders() }).then((x) => x.json());
+      if (seq !== loadSeq) return;
+      const items = r.comments || [];
+      renderList(items);
+      if (items.length < 100 && items.length !== comments) { comments = items.length; showComments(); }
+    } catch {
+      if (seq === loadSeq) list.replaceChildren(Object.assign(document.createElement('p'), { className: 'c-empty', textContent: 'Could not load comments.' }));
+    }
+  }
+
+  function renderComposer() {
+    const can = auth.mode === 'clerk' || auth.mode === 'dev';
+    $('cForm').hidden = !auth.user;
+    $('cSignIn').hidden = !!auth.user || !can;
+    if (!can && auth.mode) showErr(auth.mode === 'unavailable' ? 'Sign-in is unavailable right now, so you can read but not post.' : '');
+  }
+
+  async function openComments() {
+    ss.set('pulse:openComments', null);
+    showErr('');
+    sheet.hidden = false;
+    list.replaceChildren(Object.assign(document.createElement('p'), { className: 'c-empty', textContent: 'Loading…' }));
+    $('cForm').hidden = true; $('cSignIn').hidden = true;
+    loadComments();
+    await initAuth();
+    renderComposer();
+    loadComments(); // again with the sign-in, so your own comments show Delete
+  }
+  const closeComments = () => { sheet.hidden = true; };
+
+  $('commentBtn').addEventListener('click', openComments);
+  sheet.addEventListener('click', (e) => { if (e.target === sheet || e.target.closest('[data-close]')) closeComments(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) closeComments(); });
+  $('cSignInBtn').addEventListener('click', signIn);
+
+  const text = $('cText');
+  const left = () => { $('cLeft').textContent = String(500 - text.value.length); };
+  text.addEventListener('input', () => {
+    left();
+    text.style.height = 'auto';
+    text.style.height = `${Math.min(140, text.scrollHeight + 2)}px`;
+  });
+
+  $('cForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = text.value.trim();
+    if (!body) return;
+    showErr('');
+    $('cPost').disabled = true;
+    try {
+      const res = await fetch(`/api/comments?id=${id}`, {
+        method: 'POST',
+        headers: await authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ text: body }),
+      });
+      const r = await res.json().catch(() => ({}));
+      if (res.status === 401) { auth.user = null; renderComposer(); showErr('Please sign in again to comment.'); return; }
+      if (!res.ok) { showErr(r.error || 'Could not post your comment.'); return; }
+      text.value = ''; left(); text.style.height = '';
+      comments++; showComments();
+      const empty = list.querySelector('.c-empty');
+      if (empty) empty.remove();
+      list.prepend(commentEl(r.comment));
+      list.scrollTop = 0;
+    } catch {
+      showErr('Could not post your comment. Check your connection.');
+    } finally {
+      $('cPost').disabled = false;
+    }
+  });
+
+  async function removeComment(c, el) {
+    if (!confirm('Delete this comment?')) return;
+    try {
+      const res = await fetch(`/api/comments?id=${id}&comment=${encodeURIComponent(c.id)}`, { method: 'DELETE', headers: await authHeaders() });
+      if (!res.ok) { const r = await res.json().catch(() => ({})); toast(r.error || 'Could not delete'); return; }
+      el.remove();
+      comments = Math.max(0, comments - 1); showComments();
+      if (!list.children.length) renderList([]);
+    } catch { toast('Could not delete. Check your connection.'); }
+  }
+})();
