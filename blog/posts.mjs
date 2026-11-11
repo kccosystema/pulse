@@ -225,7 +225,7 @@ export const posts = [
 
   {
     slug: 'jam-counter-song-plays',
-    icon: '🔥',
+    icon: '🔥', image: '/img/icons/jam-counter.webp',
     feature: 'Jam counter',
     title: 'What "This Has Been Jammed X Times" Means: How PulsePic Counts Plays',
     seoTitle: 'How the PulsePic Jam Counter Counts Plays',
@@ -367,7 +367,7 @@ export const posts = [
 
   {
     slug: 'privacy-files-and-accounts',
-    icon: '🔒',
+    icon: '🔒', image: '/img/icons/privacy.webp',
     feature: 'Privacy and accounts',
     title: 'Do My Files Stay Private? How PulsePic Handles Your Picture, Song and Account',
     seoTitle: 'Is PulsePic Private? Your Files and Your Account',
