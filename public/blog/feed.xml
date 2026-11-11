@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>PulsePic Blog</title>
+  <link>https://pulsepic.com/blog</link>
+  <atom:link href="https://pulsepic.com/blog/feed.xml" rel="self" type="application/rss+xml"/>
+  <description>Guides to every PulsePic feature.</description>
+  <language>en</language>
+  <item>
+    <title>How PulsePic Finds the Beat in Any Song</title>
+    <link>https://pulsepic.com/blog/how-beat-detection-works</link>
+    <guid isPermaLink="true">https://pulsepic.com/blog/how-beat-detection-works</guid>
+    <pubDate>Wed, 11 Nov 2026 12:00:00 GMT</pubDate>
+    <category>Beat detection</category>
+    <description>PulsePic analyzes your whole song before it plays. It measures how the energy changes across about 40 frequency bands, works out the tempo (BPM), then lines up every beat and the first beat of each bar. Because the beats are known ahead of time, effects land exactly on the beat instead of a moment late.</description>
+  </item>
+  <item>
+    <title>12 Beat-Synced Effects for Your Cover Art (and 3 One-Tap Presets)</title>
+    <link>https://pulsepic.com/blog/beat-synced-effects-and-presets</link>
+    <guid isPermaLink="true">https://pulsepic.com/blog/beat-synced-effects-and-presets</guid>
+    <pubDate>Wed, 11 Nov 2026 12:00:00 GMT</pubDate>
+    <category>Effects and presets</category>
+    <description>PulsePic has 12 effects that fire on the beat: Glow, Shake, Flash, Tilt, Bounce, Echo, Rings, Sparks, RGB split, Bars, Strobe and Circle. Turn on as many as you like, or tap a preset: Chill (soft glow, rings and echo), Club (glow, flash, rings, bars and tilt) or Hype (almost everything at full strength).</description>
+  </item>
+  <item>
+    <title>How to Turn a Song and a Picture Into a Video for Instagram Reels, Stories and TikTok</title>
+    <link>https://pulsepic.com/blog/instagram-reels-stories-video</link>
+    <guid isPermaLink="true">https://pulsepic.com/blog/instagram-reels-stories-video</guid>
+    <pubDate>Wed, 11 Nov 2026 12:00:00 GMT</pubDate>
+    <category>Video export</category>
+    <description>Open PulsePic on your phone, add a picture and a song, pick your effects, then tap 🎬 Video. Choose Story / Reel (9:16), Square (1:1) or Feed (4:5), pick 15, 30, 60 or 90 seconds or the full song, and tap Record video. PulsePic makes a 1080p MP4 you can save to your phone and post to Instagram, TikTok or anywhere else.</description>
+  </item>
+  <item>
+    <title>How to Share Your Song as a Link With a Pulsing Picture and Artist Info</title>
+    <link>https://pulsepic.com/blog/share-song-link-with-artist-info</link>
+    <guid isPermaLink="true">https://pulsepic.com/blog/share-song-link-with-artist-info</guid>
+    <pubDate>Wed, 11 Nov 2026 12:00:00 GMT</pubDate>
+    <category>Share links</category>
+    <description>In the PulsePic player, tap Share, confirm you own the music or have permission, and tap Create link. You get a pulsepic.com link to a page that plays your song with your pulsing picture and effects, and shows the song name, artist, album and a button to your website. Links without an account last 30 days; sign in with Google or Apple to keep them forever.</description>
+  </item>
+  <item>
+    <title>What &quot;This Has Been Jammed X Times&quot; Means: How PulsePic Counts Plays</title>
+    <link>https://pulsepic.com/blog/jam-counter-song-plays</link>
+    <guid isPermaLink="true">https://pulsepic.com/blog/jam-counter-song-plays</guid>
+    <pubDate>Wed, 11 Nov 2026 12:00:00 GMT</pubDate>
+    <category>Jam counter</category>
+    <description>The jam counter at the top of every PulsePic share page shows how many times the song has been played. A play counts once someone has listened for at least 5 seconds, and each browser counts at most once per day, so quick taps and replays don't inflate the number. You can see the count for each of your links in My links.</description>
+  </item>
+  <item>
+    <title>Can I Use a WAV File? Uploading Studio Masters to PulsePic</title>
+    <link>https://pulsepic.com/blog/upload-wav-studio-files</link>
+    <guid isPermaLink="true">https://pulsepic.com/blog/upload-wav-studio-files</guid>
+    <pubDate>Wed, 11 Nov 2026 12:00:00 GMT</pubDate>
+    <category>Studio files</category>
+    <description>Yes. PulsePic works with WAV, AIFF and FLAC files as well as MP3, M4A, AAC and OGG. The beat is found from your original file. If you create a share link, PulsePic converts studio files to a high-quality MP3 on your phone first, so the upload is small and the share page loads fast. The original file never leaves your phone.</description>
+  </item>
+  <item>
+    <title>How to Edit a PulsePic Share Link Without Changing the URL</title>
+    <link>https://pulsepic.com/blog/edit-share-link-without-changing-url</link>
+    <guid isPermaLink="true">https://pulsepic.com/blog/edit-share-link-without-changing-url</guid>
+    <pubDate>Wed, 11 Nov 2026 12:00:00 GMT</pubDate>
+    <category>Editing</category>
+    <description>Sign in, tap your account button, open My links and tap Edit on the song. PulsePic opens it in the player, where you can change the effects, strength, sync mode, song details and picture. Tap Save changes and the same link updates for everyone, usually within a minute. Your jam count is kept.</description>
+  </item>
+  <item>
+    <title>Do My Files Stay Private? How PulsePic Handles Your Picture, Song and Account</title>
+    <link>https://pulsepic.com/blog/privacy-files-and-accounts</link>
+    <guid isPermaLink="true">https://pulsepic.com/blog/privacy-files-and-accounts</guid>
+    <pubDate>Wed, 11 Nov 2026 12:00:00 GMT</pubDate>
+    <category>Privacy and accounts</category>
+    <description>Your picture and song stay on your phone while you use PulsePic: the beat analysis, effects and video export all happen on the device. Files are only uploaded when you tap Create link to make a share page. You don't need an account to use PulsePic; signing in with Google or Apple just keeps your share links forever instead of 30 days.</description>
+  </item>
+</channel>
+</rss>

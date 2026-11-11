@@ -86,3 +86,11 @@ Shares are stored in a **Vercel Blob** store connected to this project. Connecti
 npm install
 npm run dev   # http://localhost:4400, sharing saved to .data/ instead of Vercel Blob
 ```
+
+## Blog
+
+Static, SEO/AEO-friendly blog at `/blog`, one post per feature.
+
+- Write or edit posts in `blog/posts.mjs` (each has a direct "Quick answer", question-style headings and FAQs). Keep claims true to the app.
+- Run `npm run blog` to regenerate `public/blog/**`, `public/blog/feed.xml`, `public/sitemap.xml`, `public/robots.txt` and `public/llms.txt`, then commit the output (Vercel has no build step).
+- Every post carries BlogPosting, BreadcrumbList and FAQPage structured data, a canonical URL, Open Graph tags and an RSS link. The blog isn't behind the desktop gate, so anyone can read it.

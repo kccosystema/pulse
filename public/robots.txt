@@ -1,0 +1,7 @@
+# PulsePic
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://pulsepic.com/sitemap.xml

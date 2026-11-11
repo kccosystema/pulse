@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How PulsePic Finds the Beat in Any Song</title>
+<meta name="description" content="PulsePic listens to your whole song first, works out the tempo, every beat and the start of each bar, so your picture pulses right on the beat.">
+<link rel="canonical" href="https://pulsepic.com/blog/how-beat-detection-works">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="PulsePic">
+<meta property="og:title" content="How PulsePic Finds the Beat in Any Song">
+<meta property="og:description" content="PulsePic listens to your whole song first, works out the tempo, every beat and the start of each bar, so your picture pulses right on the beat.">
+<meta property="og:url" content="https://pulsepic.com/blog/how-beat-detection-works">
+<meta property="og:image" content="https://pulsepic.com/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How PulsePic Finds the Beat in Any Song">
+<meta name="twitter:description" content="PulsePic listens to your whole song first, works out the tempo, every beat and the start of each bar, so your picture pulses right on the beat.">
+<meta name="twitter:image" content="https://pulsepic.com/img/og.jpg">
+<meta name="theme-color" content="#0b0b10">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="alternate" type="application/rss+xml" title="PulsePic Blog" href="https://pulsepic.com/blog/feed.xml">
+<link rel="stylesheet" href="/blog/blog.css">
+<meta property="article:published_time" content="2026-11-11">
+<meta property="article:section" content="Beat detection">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"How PulsePic Finds the Beat in Any Song","description":"PulsePic listens to your whole song first, works out the tempo, every beat and the start of each bar, so your picture pulses right on the beat.","image":["https://pulsepic.com/img/og.jpg"],"datePublished":"2026-11-11","dateModified":"2026-11-11","author":{"@type":"Organization","name":"PulsePic Team","url":"https://pulsepic.com"},"publisher":{"@type":"Organization","name":"PulsePic","url":"https://pulsepic.com","logo":{"@type":"ImageObject","url":"https://pulsepic.com/icon-512.png","width":512,"height":512}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://pulsepic.com/blog/how-beat-detection-works"},"url":"https://pulsepic.com/blog/how-beat-detection-works","inLanguage":"en","keywords":"beat detection, make picture pulse to music, beat sync, BPM detection, music visualizer","articleSection":"Beat detection","wordCount":637,"about":{"@type":"SoftwareApplication","name":"PulsePic","url":"https://pulsepic.com","applicationCategory":"MultimediaApplication","operatingSystem":"iOS, Android (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"PulsePic","item":"https://pulsepic.com"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://pulsepic.com/blog"},{"@type":"ListItem","position":3,"name":"How PulsePic Finds the Beat in Any Song","item":"https://pulsepic.com/blog/how-beat-detection-works"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does PulsePic upload my song to analyze it?","acceptedAnswer":{"@type":"Answer","text":"No. The beat analysis runs on your phone. Your song is only uploaded if you choose to create a share link."}},{"@type":"Question","name":"How long does the analysis take?","acceptedAnswer":{"@type":"Answer","text":"Usually a few seconds for a typical 3–4 minute song. Longer songs and older phones take a little longer."}},{"@type":"Question","name":"Can I see the BPM PulsePic detected?","acceptedAnswer":{"@type":"Answer","text":"Yes. The tempo it found is shown next to the Sync to buttons in the player."}},{"@type":"Question","name":"Why does the picture feel out of sync with Bluetooth headphones?","acceptedAnswer":{"@type":"Answer","text":"Bluetooth adds extra delay. Move the Offset slider to the right until the pulse lines up with what you hear. Exported videos are not affected, because the video and audio are saved together."}}]}</script>
+</head>
+<body>
+<header class="b-top">
+  <a class="b-brand" href="/">PulsePic</a>
+  <nav aria-label="Site"><a href="/blog">Blog</a><a class="b-try" href="/">Try it free</a></nav>
+</header>
+<main class="b-main">
+  <nav class="b-crumbs" aria-label="Breadcrumb"><a href="/">PulsePic</a> › <a href="/blog">Blog</a> › <span>Beat detection</span></nav>
+  <article>
+    <header class="b-head">
+      <span class="b-ico" aria-hidden="true">🎵</span>
+      <p class="b-kicker">Beat detection</p>
+      <h1>How PulsePic Finds the Beat in Any Song</h1>
+      <p class="b-meta">By the PulsePic Team · <time datetime="2026-11-11">November 11, 2026</time> · 3 min read</p>
+    </header>
+    <section class="b-answer" aria-labelledby="qa">
+      <h2 id="qa">Quick answer</h2>
+      <p>PulsePic analyzes your whole song before it plays. It measures how the energy changes across about 40 frequency bands, works out the tempo (BPM), then lines up every beat and the first beat of each bar. Because the beats are known ahead of time, effects land exactly on the beat instead of a moment late.</p>
+    </section>
+    <div class="b-body">
+<h2>Why most "pulse to the music" effects feel late</h2>
+<p>Many music visualizers react to sound as it comes out of the speaker: they hear a loud moment, then move the picture. That reaction always arrives a little after the beat, and it twitches on every loud noise, not just the beat you tap your foot to.</p>
+<p>PulsePic takes a different approach. When you pick a song, it studies the entire track first (the Start button shows "Analyzing song…" for a few seconds). By the time you press play, it already has a map of where every beat falls.</p>
+
+<h2>What PulsePic listens for</h2>
+<ul>
+  <li><strong>Tempo (BPM).</strong> It looks for the repeating pattern in the music and shows the tempo it found next to the sync buttons.</li>
+  <li><strong>Every beat.</strong> It places a steady grid of beats that follows the song, even through quieter parts where the drums drop out.</li>
+  <li><strong>The start of each bar.</strong> The first beat of a bar (the downbeat) usually carries the kick drum and bass. PulsePic marks it, so the bigger effects like Sparks and Strobe hit there.</li>
+  <li><strong>Kicks and other hits.</strong> It also finds individual drum hits, ranked by how strong they are, for the Kick and All hits modes.</li>
+</ul>
+
+<h2>Beat, Kick or All hits: which sync mode should I use?</h2>
+<p>Under the play button you'll find <strong>Sync to</strong> with three choices:</p>
+<ul>
+  <li><strong>Beat</strong>: a steady pulse on every beat. Best for most songs, and the most "on time" feeling.</li>
+  <li><strong>Kick</strong>: follows the bass drum. Great for hip-hop, EDM and anything with a punchy kick.</li>
+  <li><strong>All hits</strong>: reacts to every strong hit, including snares and percussion. Busier and more energetic.</li>
+</ul>
+<p>In Kick and All hits, the <strong>Sensitivity</strong> slider decides how strong a hit has to be to count. Turn it up to catch more hits, down to keep only the big ones.</p>
+
+<h2>What if the picture still feels early or late?</h2>
+<p>PulsePic already corrects for the delay your phone adds before sound reaches your ears. Some speakers and Bluetooth headphones add more delay than the phone reports, though. Use the <strong>Offset</strong> slider (from −300 to +300 ms):</p>
+<ul>
+  <li>If the picture moves <em>before</em> you hear the beat, slide it <strong>right</strong>.</li>
+  <li>If the picture moves <em>after</em> the beat, slide it <strong>left</strong>.</li>
+</ul>
+<p>Small steps make a big difference. Try 50 ms at a time.</p>
+
+<h2>Does it work with any kind of music?</h2>
+<p>It works best with music that has a clear pulse: pop, hip-hop, EDM, rock, R&amp;B, reggaeton and most dance music. Songs with no drums or with very loose timing (some ambient or classical pieces) don't have a strong beat to find, so try Beat mode with a lower Strength for a gentler "breathing" look.</p>
+<p>Want to see what the beat can drive? Read about the <a href="/blog/beat-synced-effects-and-presets">12 beat-synced effects and 3 presets</a>.</p>
+    </div>
+    <aside class="b-cta">
+  <div><b>Try PulsePic free</b><span>Add a picture and a song and watch it pulse to the beat. Open pulsepic.com on your phone.</span></div>
+  <a href="/">Open PulsePic</a>
+</aside>
+    <section class="b-faq" aria-labelledby="faq">
+      <h2 id="faq">Frequently asked questions</h2>
+      <h3>Does PulsePic upload my song to analyze it?</h3>
+      <p>No. The beat analysis runs on your phone. Your song is only uploaded if you choose to create a share link.</p>
+      <h3>How long does the analysis take?</h3>
+      <p>Usually a few seconds for a typical 3–4 minute song. Longer songs and older phones take a little longer.</p>
+      <h3>Can I see the BPM PulsePic detected?</h3>
+      <p>Yes. The tempo it found is shown next to the Sync to buttons in the player.</p>
+      <h3>Why does the picture feel out of sync with Bluetooth headphones?</h3>
+      <p>Bluetooth adds extra delay. Move the Offset slider to the right until the pulse lines up with what you hear. Exported videos are not affected, because the video and audio are saved together.</p>
+    </section>
+  </article>
+  <section class="b-related" aria-labelledby="more">
+    <h2 id="more">Keep reading</h2>
+    <div class="b-cards">
+      <a class="b-card" href="/blog/beat-synced-effects-and-presets">
+        <span class="b-ico" aria-hidden="true">✨</span>
+        <small>Effects and presets</small>
+        <b>12 Beat-Synced Effects for Your Cover Art (and 3 One-Tap Presets)</b>
+        <span>Glow, Shake, Flash, Tilt, Bounce, Echo, Rings, Sparks, RGB split, Bars, Strobe and Circle. What each PulsePic effect does and when to use it.</span>
+      </a>
+      <a class="b-card" href="/blog/instagram-reels-stories-video">
+        <span class="b-ico" aria-hidden="true">🎬</span>
+        <small>Video export</small>
+        <b>How to Turn a Song and a Picture Into a Video for Instagram Reels, Stories and TikTok</b>
+        <span>Make a 1080p MP4 of your cover art pulsing to your song, in 9:16, 1:1 or 4:5, then post it to Instagram Reels, Stories or TikTok. Free, on your phone.</span>
+      </a>
+      <a class="b-card" href="/blog/share-song-link-with-artist-info">
+        <span class="b-ico" aria-hidden="true">🔗</span>
+        <small>Share links</small>
+        <b>How to Share Your Song as a Link With a Pulsing Picture and Artist Info</b>
+        <span>Create a PulsePic share link: a mini landing page with your pulsing cover art, your song, artist name, album and website. Looks great in texts and socials.</span>
+      </a>
+    </div>
+  </section>
+</main>
+<footer class="b-foot">
+  <p><b>PulsePic</b> makes any picture pulse to the beat of a song. Free, on your phone, nothing to install.</p>
+  <p><a href="/">Home</a> · <a href="/blog">Blog</a> · <a href="/blog/feed.xml">RSS</a></p>
+  <p>© PulsePic · <a href="https://pulsepic.com">pulsepic.com</a></p>
+</footer>
+</body>
+</html>
