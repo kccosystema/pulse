@@ -14,7 +14,7 @@ export const PUBLISHED = '2026-11-11';
 export const posts = [
   {
     slug: 'how-beat-detection-works',
-    icon: '🎵',
+    icon: '🎵', image: '/img/icons/find-the-beat.webp',
     feature: 'Beat detection',
     title: 'How PulsePic Finds the Beat in Any Song',
     seoTitle: 'How PulsePic Finds the Beat in Any Song',
@@ -225,7 +225,7 @@ export const posts = [
 
   {
     slug: 'jam-counter-song-plays',
-    icon: '🔥', image: '/img/icons/jam-counter.webp',
+    icon: '🔥',
     feature: 'Jam counter',
     title: 'What "This Has Been Jammed X Times" Means: How PulsePic Counts Plays',
     seoTitle: 'How the PulsePic Jam Counter Counts Plays',
