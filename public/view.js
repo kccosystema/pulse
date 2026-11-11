@@ -12,7 +12,10 @@ engine.onFrame = () => { updateTime(); placeSocial(); };
 // edge; the play button sits inside the picture's lower-right corner.
 let socialPos = '', playPos = '';
 const PLAY_SIZE = 64, PLAY_INSET = 14;
+let floatBottom = -1;
 function placeSocial() {
+  const fb = Math.round(window.innerHeight - $('card').getBoundingClientRect().top + 6);
+  if (fb !== floatBottom) { floatBottom = fb; $('floaters').style.setProperty('--float-bottom', `${fb}px`); }
   const r = engine.imageRect, el = $('social');
   if (!r) return;
   const bp = $('bigPlay');
@@ -191,6 +194,7 @@ fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/js
       likes = r.likes || 0; liked = !!r.likedToday; comments = r.comments || 0;
       showLikes(); showComments();
       $('social').hidden = false;
+      loadFloaters();
       if (ss.get('pulse:openComments') === data.id) openComments();
     })
     .catch(() => {});
@@ -390,6 +394,7 @@ fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/js
       const empty = list.querySelector('.c-empty');
       if (empty) empty.remove();
       list.prepend(commentEl(r.comment));
+      if (window.__pulseFloat) window.__pulseFloat.add(r.comment);
       list.scrollTop = 0;
     } catch {
       showErr('Could not post your comment. Check your connection.');
@@ -408,4 +413,90 @@ fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/js
       if (!list.children.length) renderList([]);
     } catch { toast('Could not delete. Check your connection.'); }
   }
+
+  // ── floating "dancing" comments ──
+  // Comments drift up from the card to the top, swaying side to side and
+  // bopping on the beat while the song plays. ?demo=1 adds sample comments
+  // (in this browser only, nothing is saved) to preview the effect.
+  const floaters = $('floaters');
+  const demo = /[?&]demo=(1|comments)\b/.test(location.search);
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DEMO = [
+    ['Jay', 'this one goes HARD 🔥🔥'], ['Mia', 'the colors on the beat 😍'], ['DJ Nova', 'Adding this to my set tonight'],
+    ['Chris', 'on repeat all day'], ['Lena', 'that drop at 0:45 though!!'], ['Marco', 'cover art is insane'],
+    ['Tasha', 'who else is vibing rn 💃'], ['Ken', 'need the full album'], ['Riley', 'sent this to the whole group chat'],
+    ['Sam', 'chills every time'], ['Ava', '❤️❤️❤️'], ['Omar', 'producer went crazy on this one'],
+  ].map(([name, body], i) => ({ id: `demo${i}`, name, body, image: null, at: new Date().toISOString(), demo: true }));
+  let pool = [], cursor = 0, timer = null, alive = 0;
+  const MAX_ON_SCREEN = 4, EVERY_MS = 1900;
+
+  function makeFloater(c, mine) {
+    const f = document.createElement('div');
+    f.className = 'floater' + (mine ? ' mine' : '');
+    const w = floaters.clientWidth || window.innerWidth;
+    const lane = Math.random();
+    f.style.setProperty('--x', '0px'); // measured at the left edge first, then placed
+    f.style.setProperty('--dur', `${(6.5 + Math.random() * 2.5).toFixed(2)}s`);
+    f.style.setProperty('--rise', `${Math.max(200, floaters.clientHeight)}px`);
+    f.style.setProperty('--sway', `${(1.4 + Math.random() * 0.9).toFixed(2)}s`);
+    f.style.setProperty('--amp', `${Math.round(8 + Math.random() * 14)}px`);
+    f.style.setProperty('--delay', `-${(Math.random() * 1.5).toFixed(2)}s`);
+    const sway = document.createElement('div'); sway.className = 'sway';
+    const bop = document.createElement('div'); bop.className = 'bop';
+    let av;
+    if (c.image) { av = document.createElement('img'); av.src = c.image; av.alt = ''; av.referrerPolicy = 'no-referrer'; }
+    else { av = document.createElement('span'); av.textContent = (c.name || '?').trim().charAt(0).toUpperCase(); }
+    av.className = 'f-av';
+    const txt = document.createElement('div'); txt.className = 'f-txt';
+    const nm = document.createElement('b'); nm.textContent = c.name;
+    const body = document.createElement('span'); body.textContent = c.body.length > 120 ? `${c.body.slice(0, 117)}…` : c.body;
+    txt.append(nm, body);
+    bop.append(av, txt); sway.append(bop); f.append(sway);
+    alive++;
+    f.addEventListener('animationend', (e) => { if (e.target === f) { f.remove(); alive--; } });
+    floaters.append(f);
+    // Keep the whole bubble on screen (wider comments start further left).
+    const amp = parseFloat(f.style.getPropertyValue('--amp')) + 8; // sway + tilt
+    const room = w - f.offsetWidth - amp - 8;
+    const x = lane * Math.max(0, w - f.offsetWidth);
+    f.style.setProperty('--x', `${Math.round(Math.max(amp, Math.min(x, room)))}px`);
+  }
+
+  function tick() {
+    if (document.hidden || !sheet.hidden || !pool.length || alive >= MAX_ON_SCREEN) return;
+    makeFloater(pool[cursor % pool.length]);
+    cursor++;
+  }
+
+  function startFloating(items) {
+    pool = items.slice().reverse(); // oldest first, then loops
+    if (reduced || !pool.length || timer) return;
+    tick();
+    timer = setInterval(tick, EVERY_MS);
+  }
+
+  // Bop on the beat: scale bubbles with the engine's pulse while playing.
+  let lastBop = '';
+  (function bopLoop() {
+    const v = (1 + Math.min(0.12, (state.pulse || 0) * 0.1 * (audio.paused ? 0 : 1))).toFixed(3);
+    if (v !== lastBop) { lastBop = v; floaters.style.setProperty('--bop', v); }
+    requestAnimationFrame(bopLoop);
+  })();
+
+  if (demo) {
+    const tag = document.createElement('div');
+    tag.className = 'demo-tag'; tag.textContent = 'DEMO COMMENTS';
+    document.body.append(tag);
+  }
+
+  // Load the comments for floating once the counts are in.
+  async function loadFloaters() {
+    let items = [];
+    if (comments > 0) {
+      try { items = (await fetch(`/api/comments?id=${id}`, { cache: 'no-store' }).then((r) => r.json())).comments || []; } catch {}
+    }
+    if (demo) items = [...items, ...DEMO];
+    startFloating(items);
+  }
+  window.__pulseFloat = { add(c) { pool.unshift(c); if (!reduced) makeFloater(c, true); if (!timer && !reduced) startFloating(pool.slice().reverse()); } };
 })();
