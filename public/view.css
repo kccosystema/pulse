@@ -32,10 +32,10 @@ body.view #setup .btn { margin-top: 8px; width: 100%; }
 @media (prefers-reduced-motion: reduce) { .jams.bump { animation: none; } }
 
 /* Likes + comments row under the picture */
-.social { gap: 10px; margin-top: 0 !important; }
+.social { position: fixed; z-index: 4; left: 16px; top: 0; display: flex; gap: 8px; }
 .social[hidden] { display: none; }
-.soc { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; font-size: 15px;
-  background: rgba(255, 255, 255, .06); }
+.soc { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 999px; font-size: 15px;
+  background: rgba(20, 20, 28, .55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .soc svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; }
 .soc b { font-variant-numeric: tabular-nums; }
 .soc.like[aria-pressed="true"] { color: #ff5c8f; border-color: rgba(255, 61, 127, .55); background: rgba(255, 61, 127, .14); }

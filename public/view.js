@@ -3,8 +3,22 @@
 
 const data = JSON.parse($('pulse-data').textContent);
 
-engine.areaHeight = () => $('card').getBoundingClientRect().top;
-engine.onFrame = () => updateTime();
+// Leave room between the picture and the card for the like/comment buttons.
+const SOCIAL_ROOM = 58;
+engine.areaHeight = () => $('card').getBoundingClientRect().top - ($('social').hidden ? 0 : SOCIAL_ROOM);
+engine.onFrame = () => { updateTime(); placeSocial(); };
+
+// Like/comment buttons sit just under the picture, lined up with its left edge.
+let socialPos = '';
+function placeSocial() {
+  const r = engine.imageRect, el = $('social');
+  if (!r || el.hidden) return;
+  const pos = `${Math.round(r.x)},${Math.round(r.y + r.h + 12)}`;
+  if (pos === socialPos) return;
+  socialPos = pos;
+  el.style.left = `${Math.max(8, Math.round(r.x))}px`;
+  el.style.top = `${Math.round(r.y + r.h + 12)}px`;
+}
 
 // The creator's look; the picture's credits are shown in the card instead.
 state.fx = data.settings.fx || {};

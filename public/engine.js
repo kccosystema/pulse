@@ -401,6 +401,8 @@ function draw(now, dt) {
   const r = fx.round ? w / 2 : Math.min(w, h) * 0.04;
   // With credits, the picture + text block is centred together in the area.
   const baseCy = credits ? (areaH - creditH - h) / 2 + h / 2 + Math.max(0, (boxH - h) * 0.1) : areaH / 2;
+  // Where the picture rests on screen (share page puts the like/comment buttons under it).
+  if (!exportCanvas) engine.imageRect = { x: W / 2 - w / 2, y: baseCy - h / 2, w, h };
 
   let cx = W / 2, cy = baseCy;
   if (fx.bounce) cy -= h * 0.12 * k * p;
