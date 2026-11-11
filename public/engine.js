@@ -296,16 +296,35 @@ function setRenderTarget(cnv) {
   }
 }
 
+// The drawing size must match the canvas's real on-screen box. On iPhones
+// (especially links opened from Messages/Instagram) window.innerHeight is
+// often wrong for a moment on first load and no resize event follows, which
+// stretched the picture until a refresh. So measure the canvas itself, and
+// re-check every frame (cheap) so any mismatch fixes itself at once.
+function canvasBox() {
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  return [w, h];
+}
 function resize() {
   if (exportCanvas) return;
   U = 1;
   glowScale = 1;
   DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = window.innerWidth; H = window.innerHeight;
+  [W, H] = canvasBox();
   canvas.width = Math.round(W * DPR);
   canvas.height = Math.round(H * DPR);
 }
+function checkSize() {
+  if (exportCanvas) return;
+  const [w, h] = canvasBox();
+  if (w !== W || h !== H || Math.min(window.devicePixelRatio || 1, 2) !== DPR) resize();
+}
 window.addEventListener('resize', resize);
+window.addEventListener('pageshow', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 50));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', checkSize);
+if ('ResizeObserver' in window) new ResizeObserver(checkSize).observe(canvas);
 resize();
 
 let lastFrame = performance.now();
@@ -320,6 +339,7 @@ function decay(dt) {
 function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000);
   lastFrame = now;
+  checkSize();
   if (offline) { requestAnimationFrame(frame); return; }
 
   if (actx && !audio.paused) {
