@@ -58,12 +58,12 @@ ${extra}</head>`;
 
 const topBar = `<header class="b-top">
   <a class="b-brand" href="/">PulsePic</a>
-  <nav aria-label="Site"><a href="/blog">Blog</a><a class="b-try" href="/">Try it free</a></nav>
+  <nav aria-label="Site"><a href="/blog">Blog</a><a href="/about">About</a><a class="b-try" href="/">Try it free</a></nav>
 </header>`;
 
 const footer = `<footer class="b-foot">
   <p><b>PulsePic</b> makes any picture pulse to the beat of a song. Free, on your phone, nothing to install.</p>
-  <p><a href="/">Home</a> · <a href="/blog">Blog</a> · <a href="/blog/feed.xml">RSS</a></p>
+  <p><a href="/">Home</a> · <a href="/blog">Blog</a> · <a href="/about">About</a> · <a href="/blog/feed.xml">RSS</a></p>
   <p>© PulsePic · <a href="${SITE}">pulsepic.com</a></p>
 </footer>`;
 
@@ -196,6 +196,62 @@ ${footer}
 `;
 }
 
+function aboutPage() {
+  const title = 'About PulsePic: Why I Built It';
+  const description = 'I got tired of paying weekly subscription fees for simple phone apps, so I built my own. PulsePic is my free replacement for BeatLeap.';
+  const page = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: title,
+    description,
+    url: `${SITE}/about`,
+    publisher,
+    mainEntity: { '@type': 'WebApplication', name: NAME, url: SITE, applicationCategory: 'MultimediaApplication', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } },
+  };
+  const crumbs = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'PulsePic', item: SITE },
+      { '@type': 'ListItem', position: 2, name: 'About', item: `${SITE}/about` },
+    ],
+  };
+  return `${head({ title, description, canonical: `${SITE}/about`, type: 'website', extra: `${ld(page)}\n${ld(crumbs)}\n` })}
+<body>
+${topBar}
+<main class="b-main">
+  <article>
+    <header class="b-head">
+      <p class="b-kicker">About</p>
+      <h1>Why I built PulsePic</h1>
+    </header>
+    <section class="b-answer" aria-labelledby="qa">
+      <h2 id="qa">In short</h2>
+      <p>I got tired of paying weekly subscription fees for simple tools on my phone, so I started building my own. PulsePic is one of them: I made it to replace BeatLeap. It's free, it runs in your phone's browser, and there's nothing to install.</p>
+    </section>
+    <div class="b-body">
+<h2>Tired of weekly app fees</h2>
+<p>A lot of the apps on my phone had quietly turned into weekly subscriptions. Pay every week just to make a picture move to a song, trim a clip or add an effect. Those little charges add up fast, and most of these tools aren't doing anything a modern phone can't handle on its own.</p>
+<p>So I started making my own versions of the tools I actually use. PulsePic is one of them. I built it to replace BeatLeap, the app I was paying for to make my pictures pulse to music.</p>
+
+<h2>What PulsePic does</h2>
+<p>Add a picture and a song. PulsePic <a href="/blog/how-beat-detection-works">finds the beat</a>, brings your picture to life with <a href="/blog/beat-synced-effects-and-presets">beat-synced effects</a>, and lets you <a href="/blog/instagram-reels-stories-video">save a video for Reels, Stories or TikTok</a> or <a href="/blog/share-song-link-with-artist-info">share a link</a> with your song and artist info. Everything happens on your phone until you choose to share.</p>
+
+<h2>More features are coming</h2>
+<p>PulsePic is still growing, and more features are coming soon. If there's something you'd love to see, keep an eye on the <a href="/blog">blog</a> for what's new.</p>
+
+<h2>Will it stay free?</h2>
+<p>That's the plan. I'll do my best to keep PulsePic free. No weekly fees, no subscriptions. It's 100% free to use… until the hosting bill says otherwise.</p>
+    </div>
+    ${cta}
+  </article>
+</main>
+${footer}
+</body>
+</html>
+`;
+}
+
 function feed() {
   const items = posts.map((p) => `  <item>
     <title>${esc(p.title)}</title>
@@ -224,6 +280,7 @@ function sitemap() {
   const entries = [
     { loc: `${SITE}/`, lastmod: latest, pri: '1.0' },
     { loc: `${SITE}/blog`, lastmod: latest, pri: '0.8' },
+    { loc: `${SITE}/about`, lastmod: latest, pri: '0.5' },
     ...posts.map((p) => ({ loc: url(p), lastmod: p.updated || p.published || PUBLISHED, pri: '0.7' })),
   ];
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -264,6 +321,7 @@ ${posts.map((p) => `- [${p.title}](${url(p)}): ${p.answer}`).join('\n')}
 
 ## Optional
 
+- [About PulsePic](${SITE}/about): built as a free replacement for weekly-subscription phone apps like BeatLeap; more features coming; the aim is to keep it free.
 - [Blog index](${SITE}/blog)
 - [RSS feed](${SITE}/blog/feed.xml)
 `;
@@ -287,8 +345,10 @@ posts.forEach((p, i) => {
   writeFileSync(join(BLOG, p.slug, 'index.html'), postPage(p, i));
 });
 writeFileSync(join(BLOG, 'index.html'), indexPage());
+mkdirSync(join(PUB, 'about'), { recursive: true });
+writeFileSync(join(PUB, 'about', 'index.html'), aboutPage());
 writeFileSync(join(BLOG, 'feed.xml'), feed());
 writeFileSync(join(PUB, 'sitemap.xml'), sitemap());
 writeFileSync(join(PUB, 'robots.txt'), robots);
 writeFileSync(join(PUB, 'llms.txt'), llms());
-console.log(`Built ${posts.length} posts + index, feed.xml, sitemap.xml, robots.txt, llms.txt`);
+console.log(`Built ${posts.length} posts + index, about, feed.xml, sitemap.xml, robots.txt, llms.txt`);

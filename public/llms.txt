@@ -25,5 +25,6 @@ Key facts:
 
 ## Optional
 
+- [About PulsePic](https://pulsepic.com/about): built as a free replacement for weekly-subscription phone apps like BeatLeap; more features coming; the aim is to keep it free.
 - [Blog index](https://pulsepic.com/blog)
 - [RSS feed](https://pulsepic.com/blog/feed.xml)

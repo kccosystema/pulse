@@ -65,7 +65,7 @@ export const posts = [
 
   {
     slug: 'beat-synced-effects-and-presets',
-    icon: '✨',
+    icon: '✨', image: '/img/icons/effects.webp',
     feature: 'Effects and presets',
     title: '12 Beat-Synced Effects for Your Cover Art (and 3 One-Tap Presets)',
     seoTitle: '12 Beat-Synced Effects for Cover Art | PulsePic',
