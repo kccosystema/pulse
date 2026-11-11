@@ -268,7 +268,7 @@ function renderSongs() {
   if (sort === 'likes') list = list.slice().sort((a, b) => (b.likes || 0) - (a.likes || 0));
   if (sort === 'comments') list = list.slice().sort((a, b) => (b.comments || 0) - (a.comments || 0));
   if (sort === 'title') list = list.slice().sort((a, b) => a.title.localeCompare(b.title));
-  $('songCount').textContent = `${list.length} of ${songs.length} songs · ${num(list.reduce((s, x) => s + x.plays, 0))} plays`;
+  $('songCount').textContent = `${list.length} of ${songs.length} songs · ${num(list.reduce((s, x) => s + (x.realPlays ?? x.plays), 0))} real plays`;
   $('songs').replaceChildren(...list.map(songRow));
 }
 $('songSearch').addEventListener('input', renderSongs);
@@ -290,8 +290,7 @@ function songRow(s) {
   row.querySelector('img').src = s.image || '';
   row.querySelector('.main b').textContent = s.title;
   row.querySelector('.main small').textContent = [s.artist, s.album].filter(Boolean).join(' · ');
-  row.querySelector('.p').textContent = num(s.plays);
-  row.querySelector('.lk').textContent = num(s.likes || 0);
+  showCounts(row, s);
   row.querySelector('.cm').textContent = num(s.comments || 0);
   const who = row.querySelector('.who');
   const pill = document.createElement('span');
@@ -320,6 +319,13 @@ function songRow(s) {
   return row;
 }
 
+// Shown numbers, plus "(N real)" when you've set them yourself.
+function showCounts(row, s) {
+  const real = (n, r) => (r != null && r !== n ? ` (${num(r)} real)` : '');
+  row.querySelector('.p').textContent = num(s.plays) + real(s.plays, s.realPlays);
+  row.querySelector('.lk').textContent = num(s.likes || 0) + real(s.likes || 0, s.realLikes);
+}
+
 // ── Tools for your own songs: set the jam count, add comments under any name ──
 const FUNNY_NAMES = ['DJ Nova', 'Auntie Pam', 'BassHead420', 'Grandma Beats', 'Lil Subwoofer', 'Chef Remix', 'Professor Groove',
   'Karen (manager)', 'Your Ex', 'Neighbor w/ Earplugs', 'Mr. Reverb', 'Disco Steve', 'Uber Driver Mike', 'The Cat', 'Tiny Tim Tempo',
@@ -341,6 +347,8 @@ function toggleTools(row, s, btn) {
   box.className = 'tools';
   box.innerHTML = `
     <form class="t-jams"><label>🔥 Jam count <input type="number" min="0" max="100000000" step="1" inputmode="numeric" required></label><button type="submit" class="accent">Save</button></form>
+    <form class="t-likes t-jams"><label>♥ Like count <input type="number" min="0" max="100000000" step="1" inputmode="numeric" required></label><button type="submit" class="accent">Save</button></form>
+    <p class="t-note">Numbers you set show on the share page but are left out of Analytics. Real plays and likes keep adding on top.</p>
     <form class="t-comment">
       <div class="t-line"><input class="t-name" maxlength="40" placeholder="Display name" required aria-label="Display name"><button type="button" class="t-rand" title="Random funny comment">🎲 Random</button></div>
       <textarea class="t-text" maxlength="500" rows="2" placeholder="Comment" required aria-label="Comment"></textarea>
@@ -348,15 +356,26 @@ function toggleTools(row, s, btn) {
     </form>
     <div class="t-list"><small>Loading comments…</small></div>`;
   row.append(box);
-  const jamInput = box.querySelector('.t-jams input');
+  const jamInput = box.querySelector('.t-jams:not(.t-likes) input');
+  const likeInput = box.querySelector('.t-likes input');
+  likeInput.value = s.likes || 0;
+  box.querySelector('.t-likes').onsubmit = async (e) => {
+    e.preventDefault();
+    const b = e.target.querySelector('button'); b.disabled = true;
+    try {
+      const r = await api('/api/admin/likes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id, count: Math.round(+likeInput.value) }) });
+      s.likes = r.likes; showCounts(row, s);
+      toast(`Likes set to ${num(r.likes)}`);
+    } catch (err) { toast(err.message || 'Could not save'); }
+    b.disabled = false;
+  };
   jamInput.value = s.plays;
-  box.querySelector('.t-jams').onsubmit = async (e) => {
+  box.querySelector('.t-jams:not(.t-likes)').onsubmit = async (e) => {
     e.preventDefault();
     const b = e.target.querySelector('button'); b.disabled = true;
     try {
       const r = await api('/api/admin/jams', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id, count: Math.round(+jamInput.value) }) });
-      s.plays = r.plays; row.querySelector('.p').textContent = num(r.plays);
-      $('songCount').textContent = $('songCount').textContent.replace(/· [\d,]+ plays/, `· ${num(songs.reduce((t, x) => t + x.plays, 0))} plays`);
+      s.plays = r.plays; showCounts(row, s);
       toast(`Jams set to ${num(r.plays)}`);
     } catch (err) { toast(err.message || 'Could not save'); }
     b.disabled = false;
