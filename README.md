@@ -104,3 +104,10 @@ Under the picture on every share page: a ♥ like button and a 💬 comments but
 - **Floating comments**: comments drift up over the picture as glass bubbles, swaying and bopping on the beat while the song plays (up to 4 at once, looping; off for reduced-motion users). Add `?demo=1` to a share link to preview with sample comments: they exist only in that browser and nothing is saved.
 - **Admin tools** (admin → Songs → 🛠 Tools, only on songs owned by the admin's account): set the jam count and like count to any number (stored in a separate `seed` column: share pages show real + seed, Analytics and the admin totals use real only, and real activity keeps adding on top), and add comments under any display name (🎲 fills a random funny one). Those comments are stored with `user_id = 'seed'`; the list there can delete any comment on the song.
 - Stored in Postgres (`likes`, `like_marks`, `like_ips`, `comments`; created automatically). Deleting a link deletes its likes and comments. The admin Songs list shows likes and comments and can sort by them.
+
+## Saved artists, streaming links, trust and reports
+
+- **Saved artists** (`/api/artists`, signed-in users, table `artists`): name, website and Spotify / Apple Music / YouTube / SoundCloud links. Song details has an Artist dropdown that fills them in, plus "Save this artist" / "Update …". The account sheet lists My artists with Delete.
+- **Listen on buttons**: each song stores its own `links` (copied from the artist, editable per song). Only real pages on those services are accepted (`lib/stream-links.js`, checked in the app and again on the server and when the page renders).
+- **Trust**: a line at the upload step and in the share sheet, and the Terms & Copyright page at `/terms` (built by `npm run blog`).
+- **Reports** (`/api/report`, table `reports`): a Report link on every share page (reason, details, optional email; 5 per network address per day). Admin → Reports lists them with the song, Mark handled and Delete song; the tab shows a badge with the open count.

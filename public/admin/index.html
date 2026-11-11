@@ -27,6 +27,7 @@
       <button type="button" role="tab" data-tab="analytics" class="on">Analytics</button>
       <button type="button" role="tab" data-tab="songs">Songs</button>
       <button type="button" role="tab" data-tab="users">Users</button>
+      <button type="button" role="tab" data-tab="reports">Reports <span class="badge" id="reportBadge" hidden></span></button>
     </nav>
 
     <section data-panel="analytics">
@@ -60,6 +61,11 @@
       </div>
       <p class="note" id="songCount"></p>
       <div id="songs" class="adm-list"></div>
+    </section>
+
+    <section data-panel="reports" hidden>
+      <p class="note" id="reportCount">Loading…</p>
+      <div id="reports" class="adm-list"></div>
     </section>
 
     <section data-panel="users" hidden>

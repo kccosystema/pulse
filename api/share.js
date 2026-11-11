@@ -4,6 +4,7 @@ import { isOurMediaUrl, storageMode, blobAuth, getJSON, putJSON, deletePaths } f
 import { getUser } from '../lib/auth.js';
 import { saveNewShare, newClaimToken, hashToken, GUEST_DAYS, isShareId, sharePath, ownerIndexPath, indexEntry } from '../lib/shares.js';
 import { json } from '../lib/http.js';
+import { cleanLinks } from '../lib/stream-links.js';
 import { track } from '../lib/analytics.js';
 
 const FX = ['glow', 'shake', 'flash', 'tilt', 'bounce', 'echo', 'rings', 'sparks', 'rgb', 'bars', 'strobe', 'round'];
@@ -77,6 +78,7 @@ export async function POST(request) {
     artist,
     album: str(m.album, 120),
     website: website(m.website),
+    links: cleanLinks(m.links),
     image: { url: m.image.url, width: num(m.image.width, 1, 10000, 1000), height: num(m.image.height, 1, 10000, 1000) },
     audio: {
       url: m.audio.url,
@@ -147,6 +149,7 @@ export async function PATCH(request) {
   m.artist = artist;
   m.album = str(b.album, 120);
   m.website = website(b.website);
+  if (b.links !== undefined) m.links = cleanLinks(b.links);
   if (b.settings) m.settings = cleanSettings(b.settings);
   if (typeof b.featured === 'boolean') m.featured = b.featured;
   m.updatedAt = new Date().toISOString();

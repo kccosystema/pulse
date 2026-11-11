@@ -82,7 +82,7 @@
     <img src="/img/qr-pulsepic.svg" width="120" height="120" alt="QR code that opens pulsepic.com">
     <div><b>Ready? Grab your phone.</b><span>Scan the code or open <strong>pulsepic.com</strong> in your phone’s browser.</span></div>
   </section>
-  <footer class="home-foot">© PulsePic · <a href="https://pulsepic.com">pulsepic.com</a> · <a href="/blog">Blog</a> · <a href="/about">About</a></footer>
+  <footer class="home-foot">© PulsePic · <a href="https://pulsepic.com">pulsepic.com</a> · <a href="/blog">Blog</a> · <a href="/about">About</a> · <a href="/terms">Terms</a></footer>
 </div>
 
 <div id="homePage">
@@ -127,6 +127,8 @@
     <span class="txt"><b>Song</b><small id="audioName">Tap to choose</small></span>
   </label>
 
+  <p class="trust">🔒 Your song stays on your phone unless you create a share link. You keep all rights, and we never sell or reuse your music. <a href="/terms">Terms</a></p>
+
   <p id="status" class="status" aria-live="polite"></p>
 
   <button type="button" class="pick details-pick" id="detailsBtnSetup">
@@ -146,7 +148,7 @@
     </ol>
   </section>
 
-  <footer class="home-foot">© PulsePic · <a href="https://pulsepic.com">pulsepic.com</a> · <a href="/blog">Blog</a> · <a href="/about">About</a></footer>
+  <footer class="home-foot">© PulsePic · <a href="https://pulsepic.com">pulsepic.com</a> · <a href="/blog">Blog</a> · <a href="/about">About</a> · <a href="/terms">Terms</a></footer>
 </div>
 
 <section id="player" class="panel bottom" hidden>
@@ -201,10 +203,19 @@
   <form class="panel sheet-card" id="detailsForm" novalidate>
     <h2>Song details</h2>
     <p class="note" id="detailsNote" hidden></p>
+    <label class="field" id="d_pickWrap" hidden>Artist <select id="d_pick"><option value="">+ New artist</option></select></label>
     <label class="field">Song name <input id="d_title" maxlength="120" autocomplete="off" required></label>
     <label class="field">Artist name <input id="d_artist" maxlength="120" autocomplete="off" required></label>
     <label class="field">Album <span class="opt">optional</span> <input id="d_album" maxlength="120" autocomplete="off"></label>
     <label class="field">Artist website <span class="opt">optional</span> <input id="d_website" type="url" inputmode="url" maxlength="300" placeholder="example.com" autocomplete="url"></label>
+    <details class="links-box" id="d_linksBox">
+      <summary>Streaming links <span class="opt">optional · “Listen on” buttons</span></summary>
+      <label class="field">Spotify <input id="d_spotify" inputmode="url" maxlength="400" placeholder="open.spotify.com/…" autocomplete="off"></label>
+      <label class="field">Apple Music <input id="d_apple" inputmode="url" maxlength="400" placeholder="music.apple.com/…" autocomplete="off"></label>
+      <label class="field">YouTube <input id="d_youtube" inputmode="url" maxlength="400" placeholder="youtube.com/…" autocomplete="off"></label>
+      <label class="field">SoundCloud <input id="d_soundcloud" inputmode="url" maxlength="400" placeholder="soundcloud.com/…" autocomplete="off"></label>
+    </details>
+    <label class="check" id="d_saveWrap" hidden><input type="checkbox" id="d_save" checked> <span id="d_saveLabel">Save this artist for next time</span></label>
     <label class="check"><input type="checkbox" id="d_showCredits" checked> Show song name and artist on the video</label>
     <div class="row">
       <button type="button" data-close>Cancel</button>
@@ -218,7 +229,7 @@
     <h2>Share link</h2>
     <p class="share-what"><b id="shareTitle"></b><br><span id="shareSub"></span></p>
     <form id="shareForm">
-      <p class="note">Creates a page anyone with the link can open to watch and hear this song with your effects. The picture and song are uploaded.</p>
+      <p class="note">Creates a page anyone with the link can open to watch and hear this song with your effects. The picture and song are uploaded only to play this page. You keep all rights and can delete it anytime. <a href="/terms">Terms</a></p>
       <div class="account-box" id="shareAccount" hidden>
         <p><b>Keep this link forever</b><br><span>Sign in with Google or Apple. Without an account, links are deleted after 30 days.</span></p>
         <button type="button" id="shareSignIn" class="accent">Sign in</button>
@@ -352,6 +363,8 @@
     </div>
     <h3>My links</h3>
     <div id="myLinks" class="my-links"></div>
+    <h3 id="myArtistsTitle" hidden>My artists</h3>
+    <div id="myArtists" class="my-links" hidden></div>
     <a class="btn wide" id="adminLink" href="/admin" hidden>Admin dashboard</a>
     <div class="row">
       <button type="button" id="signOutBtn">Sign out</button>

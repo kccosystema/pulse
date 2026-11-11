@@ -100,13 +100,14 @@ async function enter() {
 // ───────────────────────── tabs ─────────────────────────
 
 let days = 30;
-const loaded = { songs: false, users: false };
+const loaded = { songs: false, users: false, reports: false };
 
 document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
   document.querySelectorAll('[data-tab]').forEach((x) => x.classList.toggle('on', x === b));
   document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== b.dataset.tab; });
   if (b.dataset.tab === 'songs' && !loaded.songs) loadSongs();
   if (b.dataset.tab === 'users' && !loaded.users) loadUsers();
+  if (b.dataset.tab === 'reports' && !loaded.reports) loadReports();
 }));
 
 document.querySelectorAll('[data-days]').forEach((b) => b.addEventListener('click', async () => {
@@ -128,6 +129,7 @@ const METRICS = [
 ];
 
 function renderStats(s) {
+  if (typeof s.openReports === 'number') setBadge(s.openReports);
   const p = s.period || {};
   const tiles = [
     ['Users', s.totals.users, `+${num(p.signup)} in ${s.days} days`],
@@ -422,6 +424,65 @@ async function loadToolComments(box, s, row) {
       return el;
     }));
   } catch { list.innerHTML = '<small>Could not load comments.</small>'; }
+}
+
+// ───────────────────────── reports ─────────────────────────
+let reports = [];
+async function loadReports() {
+  $('reportCount').textContent = 'Loading…';
+  try {
+    reports = (await api('/api/admin/reports')).reports;
+    loaded.reports = true;
+    renderReports();
+  } catch { $('reportCount').textContent = 'Couldn’t load reports.'; }
+}
+
+function setBadge(n) { const b = $('reportBadge'); b.textContent = n; b.hidden = !n; }
+
+function renderReports() {
+  const open = reports.filter((r) => r.status === 'open').length;
+  setBadge(open);
+  $('reportCount').textContent = reports.length ? `${open} open · ${reports.length} total` : 'No reports. 🎉';
+  $('reports').replaceChildren(...reports.map(reportRow));
+}
+
+function reportRow(r) {
+  const row = document.createElement('div');
+  row.className = 'adm-row report' + (r.status === 'open' ? ' open' : '');
+  row.innerHTML = `<img alt="" loading="lazy"><div class="main"><b></b><small></small></div>
+    <div class="r-body"><span class="pill"></span> <span class="r-reason"></span><p class="r-details"></p><small class="r-meta"></small></div>
+    <div class="acts"><a class="btn" target="_blank" rel="noopener">Open</a><button type="button" class="r-done">Mark handled</button><button type="button" class="danger r-del">Delete song</button></div>`;
+  const song = r.song;
+  row.querySelector('img').src = (song && song.image) || '';
+  row.querySelector('.main b').textContent = song ? song.title : '(song already removed)';
+  row.querySelector('.main small').textContent = song ? song.artist : r.shareId;
+  const pill = row.querySelector('.pill');
+  pill.className = `pill ${r.status === 'open' ? 'guest' : 'member'}`;
+  pill.textContent = r.status === 'open' ? 'open' : r.status;
+  row.querySelector('.r-reason').textContent = r.reasonText;
+  row.querySelector('.r-details').textContent = r.details || '(no details)';
+  row.querySelector('.r-meta').textContent = `${fmtDate(r.at)}${r.contact ? ' · ' + r.contact : ''}`;
+  const a = row.querySelector('a');
+  if (song) a.href = song.url; else a.remove();
+  const done = row.querySelector('.r-done'), del = row.querySelector('.r-del');
+  done.textContent = r.status === 'open' ? 'Mark handled' : 'Reopen';
+  done.onclick = async () => {
+    const status = r.status === 'open' ? 'done' : 'open';
+    try { await api('/api/admin/reports', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: r.id, status }) }); r.status = status; renderReports(); }
+    catch { toast('Could not update'); }
+  };
+  if (!song) del.remove();
+  else del.onclick = async () => {
+    if (!confirm(`Delete “${song.title}” by ${song.artist}? The link stops working and its song and picture are removed.`)) return;
+    try {
+      await api(`/api/admin/songs?id=${encodeURIComponent(r.shareId)}`, { method: 'DELETE' });
+      await api('/api/admin/reports', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: r.id, status: 'done' }) });
+      reports.filter((x) => x.shareId === r.shareId).forEach((x) => { x.song = null; if (x.status === 'open') x.status = 'done'; });
+      songs = songs.filter((x) => x.id !== r.shareId);
+      renderReports(); toast('Song deleted');
+    } catch { toast('Could not delete'); }
+  };
+  return row;
 }
 
 // ───────────────────────── users ─────────────────────────

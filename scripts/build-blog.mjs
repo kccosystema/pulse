@@ -63,7 +63,7 @@ const topBar = `<header class="b-top">
 
 const footer = `<footer class="b-foot">
   <p><b>PulsePic</b> makes any picture pulse to the beat of a song. Free, on your phone, nothing to install.</p>
-  <p><a href="/">Home</a> · <a href="/blog">Blog</a> · <a href="/about">About</a> · <a href="/blog/feed.xml">RSS</a></p>
+  <p><a href="/">Home</a> · <a href="/blog">Blog</a> · <a href="/about">About</a> · <a href="/terms">Terms</a> · <a href="/blog/feed.xml">RSS</a></p>
   <p>© PulsePic · <a href="${SITE}">pulsepic.com</a></p>
 </footer>`;
 
@@ -252,6 +252,71 @@ ${footer}
 `;
 }
 
+const TERMS_UPDATED = '2026-11-11';
+function termsPage() {
+  const title = 'Terms & Copyright | PulsePic';
+  const description = 'Plain-English terms for PulsePic: you keep all rights to your music and art, we never sell or reuse it, and how to report or take down a page.';
+  const page = { '@context': 'https://schema.org', '@type': 'WebPage', name: 'Terms & Copyright', description, url: `${SITE}/terms`, publisher, dateModified: TERMS_UPDATED };
+  return `${head({ title, description, canonical: `${SITE}/terms`, type: 'website', extra: `${ld(page)}\n` })}
+<body>
+${topBar}
+<main class="b-main">
+  <article>
+    <header class="b-head">
+      <p class="b-kicker">Terms &amp; Copyright</p>
+      <h1>Your music stays yours</h1>
+      <p class="b-meta">Last updated <time datetime="${TERMS_UPDATED}">${longDate(TERMS_UPDATED)}</time></p>
+    </header>
+    <section class="b-answer" aria-labelledby="qa">
+      <h2 id="qa">In short</h2>
+      <p>You keep every right to the music and pictures you use with PulsePic. Your files stay on your phone unless you create a share link, and then they are stored only to play that page. We never sell, license or reuse your work. If a page uses your music or art without permission, tap Report on it and we will take it down.</p>
+    </section>
+    <div class="b-body">
+<h2>You own your work</h2>
+<p>Using PulsePic doesn’t give us any ownership of your songs, pictures, artist details or anything else you add. You keep all rights.</p>
+
+<h2>What we store, and why</h2>
+<ul>
+  <li><strong>Making visuals and videos</strong>: happens on your phone. Nothing is uploaded.</li>
+  <li><strong>Share links</strong>: when you tap Create link, a copy of the picture (resized) and the song (compressed if needed), plus the details and effect settings you chose, are stored so the share page can play them. Anyone with the link can open that page.</li>
+  <li><strong>Accounts</strong>: if you sign in with Google or Apple, we keep your name, email and profile picture to run your account, your saved artists and your links.</li>
+  <li><strong>Comments and likes</strong>: comments show the name and picture from the commenter’s account. Likes and plays are counted without identifying who made them.</li>
+</ul>
+
+<h2>What we never do</h2>
+<ul>
+  <li>Sell, license or give your music or pictures to anyone.</li>
+  <li>Reuse your work for anything other than playing your own share page, including advertising or training AI.</li>
+  <li>Claim your work as ours or put it on other sites.</li>
+</ul>
+
+<h2>Only share what you have the rights to</h2>
+<p>When you create a share link, you confirm that you own the music and picture or have permission to share them. Don’t upload anything that infringes someone else’s rights or that is hateful, harassing or illegal.</p>
+
+<h2>Removing your content</h2>
+<ul>
+  <li>Delete any of your links at any time from <strong>My links</strong>. That removes the page, the picture, the song, its comments and its counts.</li>
+  <li>Links made without an account are deleted automatically after 30 days.</li>
+</ul>
+
+<h2>Reporting a page and takedowns</h2>
+<p>If a PulsePic page uses your music or art without permission, or breaks these rules, tap <strong>Report</strong> at the bottom of that page. Tell us what’s yours and, if you like, leave an email so we can follow up. We review every report and remove pages that infringe or break these rules. Accounts that repeatedly share other people’s work will be removed.</p>
+
+<h2>Streaming links</h2>
+<p>Artists can add “Listen on” buttons for Spotify, Apple Music, YouTube and SoundCloud. Those buttons only link to the artist’s pages on those services. PulsePic doesn’t copy, record or stream music from them.</p>
+
+<h2>A free service</h2>
+<p>PulsePic is free and provided as is. We work hard to keep it running and your links available, but we can’t promise it will always be available or error-free, and features may change. If we ever need to change these terms, we’ll update this page and the date above.</p>
+    </div>
+    ${cta}
+  </article>
+</main>
+${footer}
+</body>
+</html>
+`;
+}
+
 function feed() {
   const items = posts.map((p) => `  <item>
     <title>${esc(p.title)}</title>
@@ -281,6 +346,7 @@ function sitemap() {
     { loc: `${SITE}/`, lastmod: latest, pri: '1.0' },
     { loc: `${SITE}/blog`, lastmod: latest, pri: '0.8' },
     { loc: `${SITE}/about`, lastmod: latest, pri: '0.5' },
+    { loc: `${SITE}/terms`, lastmod: latest, pri: '0.3' },
     ...posts.map((p) => ({ loc: url(p), lastmod: p.updated || p.published || PUBLISHED, pri: '0.7' })),
   ];
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -321,6 +387,7 @@ ${posts.map((p) => `- [${p.title}](${url(p)}): ${p.answer}`).join('\n')}
 
 ## Optional
 
+- [Terms & Copyright](${SITE}/terms): users keep all rights; files are stored only to play their share page; never sold or reused; report/takedown via the Report link on any share page.
 - [About PulsePic](${SITE}/about): built as a free replacement for weekly-subscription phone apps like BeatLeap; more features coming; the aim is to keep it free.
 - [Blog index](${SITE}/blog)
 - [RSS feed](${SITE}/blog/feed.xml)
@@ -347,8 +414,10 @@ posts.forEach((p, i) => {
 writeFileSync(join(BLOG, 'index.html'), indexPage());
 mkdirSync(join(PUB, 'about'), { recursive: true });
 writeFileSync(join(PUB, 'about', 'index.html'), aboutPage());
+mkdirSync(join(PUB, 'terms'), { recursive: true });
+writeFileSync(join(PUB, 'terms', 'index.html'), termsPage());
 writeFileSync(join(BLOG, 'feed.xml'), feed());
 writeFileSync(join(PUB, 'sitemap.xml'), sitemap());
 writeFileSync(join(PUB, 'robots.txt'), robots);
 writeFileSync(join(PUB, 'llms.txt'), llms());
-console.log(`Built ${posts.length} posts + index, about, feed.xml, sitemap.xml, robots.txt, llms.txt`);
+console.log(`Built ${posts.length} posts + index, about, terms, feed.xml, sitemap.xml, robots.txt, llms.txt`);

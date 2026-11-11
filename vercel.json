@@ -25,6 +25,10 @@
     {
       "source": "/about",
       "destination": "/about/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms/index.html"
     }
   ],
   "headers": [

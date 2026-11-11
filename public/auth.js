@@ -217,6 +217,7 @@ function openAccountSheet() {
   av.style.backgroundImage = u.imageUrl ? `url("${u.imageUrl}")` : '';
   av.textContent = u.imageUrl ? '' : (u.name || '?').charAt(0).toUpperCase();
   $('accountSheet').hidden = false;
+  if (typeof renderMyArtists === 'function') renderMyArtists();
   loadMyLinks();
 }
 

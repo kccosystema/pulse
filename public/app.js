@@ -228,7 +228,7 @@ $('recordSignIn').addEventListener('click', () => { closeSheets(); startSignIn('
 
 // ───────────────────────── song details ─────────────────────────
 
-const details = { title: '', artist: '', album: '', website: '' };
+const details = { title: '', artist: '', album: '', website: '', links: {} };
 let detailsTouched = false; // once the user edits, don't overwrite with file tags
 
 function applyDetails() {
@@ -238,8 +238,122 @@ function applyDetails() {
   $('detailsBtnSetup').classList.toggle('done', !!summary);
 }
 
+// ── streaming links (same rules as the server's lib/stream-links.js) ──
+const LINK_SERVICES = {
+  spotify: { name: 'Spotify', hosts: ['open.spotify.com', 'spotify.link'] },
+  apple: { name: 'Apple Music', hosts: ['music.apple.com', 'itunes.apple.com'] },
+  youtube: { name: 'YouTube', hosts: ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be'] },
+  soundcloud: { name: 'SoundCloud', hosts: ['soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com', 'on.soundcloud.com'] },
+};
+function cleanStreamLink(service, v) {
+  const s = (v || '').trim();
+  if (!s) return '';
+  try {
+    const u = new URL(/^https?:\/\//i.test(s) ? s : 'https://' + s);
+    if (!LINK_SERVICES[service].hosts.includes(u.hostname.toLowerCase())) return null;
+    u.protocol = 'https:';
+    return u.href;
+  } catch { return null; }
+}
+
+// ── saved artists (signed-in users) ──
+let savedArtists = null; // [{ id, name, website, links }] once loaded
+const sameLinks = (a = {}, b = {}) => Object.keys(LINK_SERVICES).every((k) => (a[k] || '') === (b[k] || ''));
+async function loadArtists(force) {
+  if (!(accountsEnabled() && account.user)) { savedArtists = null; return; }
+  if (savedArtists && !force) return;
+  try {
+    const r = await authFetch('/api/artists').then((x) => (x.ok ? x.json() : null));
+    savedArtists = r ? r.artists : null;
+  } catch { savedArtists = null; }
+}
+function fillArtistPicker() {
+  const sel = $('d_pick');
+  const on = !!(account.user && savedArtists);
+  $('d_pickWrap').hidden = !on || !savedArtists.length;
+  $('d_saveWrap').hidden = !account.user || !savedArtists;
+  if (!on) return;
+  sel.replaceChildren(new Option('+ New artist', ''), ...savedArtists.map((a) => new Option(a.name, a.id)));
+  const match = savedArtists.find((a) => a.name.toLowerCase() === ($('d_artist').value || '').trim().toLowerCase());
+  sel.value = match ? match.id : '';
+  updateSaveLabel();
+}
+function pickedArtist() { return savedArtists && savedArtists.find((a) => a.id === $('d_pick').value); }
+function updateSaveLabel() {
+  const a = pickedArtist();
+  $('d_saveLabel').textContent = a ? `Update “${a.name}” with these details` : 'Save this artist for next time';
+}
+function setLinkFields(links = {}) {
+  for (const k of Object.keys(LINK_SERVICES)) $('d_' + k).value = links[k] || '';
+  $('d_linksBox').open = Object.values(links).some(Boolean) || $('d_linksBox').open;
+}
+$('d_pick').addEventListener('change', () => {
+  const a = pickedArtist();
+  if (a) {
+    $('d_artist').value = a.name;
+    $('d_website').value = a.website || '';
+    setLinkFields(a.links || {});
+  } else {
+    $('d_artist').value = ''; $('d_website').value = ''; setLinkFields({});
+    $('d_artist').focus();
+  }
+  updateSaveLabel();
+});
+$('d_artist').addEventListener('input', () => {
+  // Typing a different name means a new artist (unless it matches a saved one).
+  if (!savedArtists) return;
+  const v = $('d_artist').value.trim().toLowerCase();
+  const match = savedArtists.find((a) => a.name.toLowerCase() === v);
+  const cur = pickedArtist();
+  if (match) $('d_pick').value = match.id;
+  else if (cur && cur.name.toLowerCase() !== v) $('d_pick').value = '';
+  updateSaveLabel();
+});
+
+async function saveArtistProfile(profile) {
+  try {
+    const cur = pickedArtist() || (savedArtists || []).find((a) => a.name.toLowerCase() === profile.name.toLowerCase());
+    if (cur && cur.name === profile.name && (cur.website || '') === profile.website && sameLinks(cur.links, profile.links)) return;
+    const res = await authFetch(cur ? `/api/artists?id=${encodeURIComponent(cur.id)}` : '/api/artists', {
+      method: cur ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(profile),
+    });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(r.error || 'Could not save the artist'); return; }
+    await loadArtists(true);
+    toast(cur ? `Updated ${profile.name}` : `Saved ${profile.name} to your artists`);
+  } catch { toast('Could not save the artist'); }
+}
+
+// Account sheet: saved artists with Delete.
+async function renderMyArtists() {
+  const box = $('myArtists'), title = $('myArtistsTitle');
+  await loadArtists(true);
+  const list = savedArtists || [];
+  title.hidden = box.hidden = !list.length;
+  box.replaceChildren(...list.map((a) => {
+    const row = document.createElement('div'); row.className = 'artist-row';
+    const meta = document.createElement('div'); meta.className = 'link-meta';
+    const b = document.createElement('b'); b.textContent = a.name;
+    const sm = document.createElement('small');
+    sm.textContent = Object.keys(LINK_SERVICES).filter((k) => a.links && a.links[k]).map((k) => LINK_SERVICES[k].name).join(' · ') || a.website || 'No links yet';
+    meta.append(b, sm);
+    const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Delete';
+    del.onclick = async () => {
+      if (!confirm(`Remove “${a.name}” from your saved artists? Songs already shared keep their details.`)) return;
+      const res = await authFetch(`/api/artists?id=${encodeURIComponent(a.id)}`, { method: 'DELETE' }).catch(() => null);
+      if (res && res.ok) renderMyArtists(); else toast('Could not delete');
+    };
+    row.append(meta, del);
+    return row;
+  }));
+}
+
 function openDetails(note) {
-  for (const k of Object.keys(details)) $('d_' + k).value = details[k];
+  for (const k of ['title', 'artist', 'album', 'website']) $('d_' + k).value = details[k] || '';
+  setLinkFields(details.links || {});
+  $('d_save').checked = true;
+  $('d_pickWrap').hidden = true; $('d_saveWrap').hidden = true;
+  loadArtists().then(fillArtistPicker);
   $('d_showCredits').checked = state.showCredits;
   $('detailsNote').textContent = note || '';
   $('detailsNote').hidden = !note;
@@ -258,6 +372,20 @@ $('detailsForm').addEventListener('submit', (e) => {
   details.artist = $('d_artist').value.trim();
   details.album = $('d_album').value.trim();
   details.website = url || '';
+  const links = {};
+  for (const k of Object.keys(LINK_SERVICES)) {
+    const el = $('d_' + k), v = cleanStreamLink(k, el.value);
+    if (v === null) {
+      $('d_linksBox').open = true;
+      el.setCustomValidity(`That doesn’t look like a ${LINK_SERVICES[k].name} link`); el.reportValidity(); return;
+    }
+    el.setCustomValidity('');
+    if (v) links[k] = v;
+  }
+  details.links = links;
+  if (account.user && savedArtists && !$('d_saveWrap').hidden && $('d_save').checked && details.artist) {
+    saveArtistProfile({ name: details.artist, website: details.website, links });
+  }
   state.showCredits = $('d_showCredits').checked;
   detailsTouched = true;
   state.shareLink = null;
@@ -267,6 +395,7 @@ $('detailsForm').addEventListener('submit', (e) => {
   if (pendingShare) { pendingShare = false; editing ? openSaveSheet() : openShare(); }
 });
 $('d_website').addEventListener('input', () => $('d_website').setCustomValidity(''));
+for (const k of Object.keys(LINK_SERVICES)) $('d_' + k).addEventListener('input', (e) => e.target.setCustomValidity(''));
 
 function normalizeUrl(v) {
   if (!v) return '';
@@ -453,7 +582,7 @@ async function createShare(progress) {
   const r = state.rawAnalysis;
   const manifest = {
     v: 1,
-    title: details.title, artist: details.artist, album: details.album, website: details.website,
+    title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {},
     image: { url: img.url, width: cover.width, height: cover.height },
     audio: { url: up.url, type: song.type, duration: isFinite(audio.duration) ? audio.duration : null, delay: song.delay },
     settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode },
@@ -636,7 +765,7 @@ async function startEdit(id) {
       hits: a.hits.map(([t, z]) => ({ t, z })),
     } : null;
 
-    Object.assign(details, { title: m.title, artist: m.artist, album: m.album || '', website: m.website || '' });
+    Object.assign(details, { title: m.title, artist: m.artist, album: m.album || '', website: m.website || '', links: m.links || {} });
     detailsTouched = true;
     applyDetails();
     const st = m.settings || {};
@@ -712,7 +841,7 @@ $('saveForm').addEventListener('submit', async (e) => {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        title: details.title, artist: details.artist, album: details.album, website: details.website,
+        title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {},
         settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode },
         featured: $('e_feature').checked,
         image,

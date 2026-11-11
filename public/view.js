@@ -500,3 +500,31 @@ fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/js
   }
   window.__pulseFloat = { add(c) { pool.unshift(c); if (!reduced) makeFloater(c, true); if (!timer && !reduced) startFloating(pool.slice().reverse()); } };
 })();
+
+// ───────────────────────── report ─────────────────────────
+(() => {
+  const sheet = $('reportSheet'), form = $('reportForm'), err = $('rError');
+  const showErr = (m) => { err.textContent = m || ''; err.hidden = !m; };
+  $('reportBtn').addEventListener('click', () => { showErr(''); sheet.hidden = false; });
+  sheet.addEventListener('click', (e) => { if (e.target === sheet || e.target.closest('[data-close]')) sheet.hidden = true; });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) sheet.hidden = true; });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const reason = (form.querySelector('input[name=reason]:checked') || {}).value;
+    if (!reason) { showErr('Pick a reason'); return; }
+    showErr('');
+    $('rSend').disabled = true;
+    try {
+      const res = await fetch(`/api/report?id=${encodeURIComponent(data.id)}`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ reason, details: $('rDetails').value, contact: $('rContact').value.trim() }),
+      });
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok) { showErr(r.error || 'Could not send the report'); return; }
+      sheet.hidden = true;
+      form.reset();
+      toast('Thanks, your report was sent to the PulsePic team.');
+    } catch { showErr('Could not send. Check your connection.'); }
+    finally { $('rSend').disabled = false; }
+  });
+})();

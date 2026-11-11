@@ -25,6 +25,7 @@ Key facts:
 
 ## Optional
 
+- [Terms & Copyright](https://pulsepic.com/terms): users keep all rights; files are stored only to play their share page; never sold or reused; report/takedown via the Report link on any share page.
 - [About PulsePic](https://pulsepic.com/about): built as a free replacement for weekly-subscription phone apps like BeatLeap; more features coming; the aim is to keep it free.
 - [Blog index](https://pulsepic.com/blog)
 - [RSS feed](https://pulsepic.com/blog/feed.xml)
