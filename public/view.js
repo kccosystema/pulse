@@ -8,11 +8,25 @@ const SOCIAL_ROOM = 58;
 engine.areaHeight = () => $('card').getBoundingClientRect().top - ($('social').hidden ? 0 : SOCIAL_ROOM);
 engine.onFrame = () => { updateTime(); placeSocial(); };
 
-// Like/comment buttons sit just under the picture, lined up with its left edge.
-let socialPos = '';
+// Like/comment buttons sit just under the picture, lined up with its left
+// edge; the play button sits inside the picture's lower-right corner.
+let socialPos = '', playPos = '';
+const PLAY_SIZE = 64, PLAY_INSET = 14;
 function placeSocial() {
   const r = engine.imageRect, el = $('social');
-  if (!r || el.hidden) return;
+  if (!r) return;
+  const bp = $('bigPlay');
+  if (!bp.hidden) {
+    const inset = Math.min(PLAY_INSET, r.w * 0.05);
+    const pp = `${Math.round(r.x + r.w - PLAY_SIZE - inset)},${Math.round(r.y + r.h - PLAY_SIZE - inset)}`;
+    if (pp !== playPos) {
+      playPos = pp;
+      const [x, y] = pp.split(',');
+      bp.style.left = `${x}px`; bp.style.top = `${y}px`;
+      bp.classList.add('placed');
+    }
+  }
+  if (el.hidden) return;
   const pos = `${Math.round(r.x)},${Math.round(r.y + r.h + 12)}`;
   if (pos === socialPos) return;
   socialPos = pos;
@@ -64,6 +78,8 @@ async function start() {
   play();
 }
 $('bigPlay').addEventListener('click', start);
+// If the picture never loads, still show the play button (centred).
+setTimeout(() => { const bp = $('bigPlay'); if (!bp.classList.contains('placed')) { bp.style.left = 'calc(50% - 32px)'; bp.classList.add('placed'); } }, 3000);
 $('playBtn').addEventListener('click', () => (!started ? start() : audio.paused ? play() : audio.pause()));
 audio.addEventListener('play', () => { $('playBtn').textContent = '❚❚'; $('playBtn').ariaLabel = 'Pause'; $('bigPlay').hidden = true; });
 audio.addEventListener('pause', () => { $('playBtn').textContent = '▶'; $('playBtn').ariaLabel = 'Play'; });

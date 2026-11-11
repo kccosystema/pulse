@@ -22,12 +22,14 @@
 .made { margin: 8px 0 0; text-align: center; font-size: 12px; color: var(--muted); }
 .made a { color: var(--text); }
 
-.big-play { position: fixed; z-index: 5; left: 50%; top: 38%; transform: translate(-50%, -50%); width: 92px; height: 92px; padding: 0;
-  border-radius: 50%; border: 0; font-size: 34px; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: 0 10px 40px rgba(255, 61, 127, .45); animation: breathe 1.6s ease-in-out infinite; }
-.big-play span { margin-left: 6px; }
+.big-play { position: fixed; z-index: 5; left: 50%; top: 38%; width: 64px; height: 64px; padding: 0;
+  border-radius: 50%; border: 0; font-size: 24px; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 28px rgba(255, 61, 127, .5), 0 0 0 2px rgba(255, 255, 255, .25); animation: breathe 1.6s ease-in-out infinite;
+  visibility: hidden; } /* shown once it is placed on the picture's lower-right corner */
+.big-play.placed { visibility: visible; }
+.big-play span { margin-left: 4px; }
 .big-play[hidden] { display: none; }
-@keyframes breathe { 50% { transform: translate(-50%, -50%) scale(1.07); } }
+@keyframes breathe { 50% { transform: scale(1.07); } }
 @media (prefers-reduced-motion: reduce) { .big-play { animation: none; } }
 body.view #setup .btn { margin-top: 8px; width: 100%; }
 
