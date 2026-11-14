@@ -56,9 +56,21 @@ if (data.analysis) {
   };
 }
 
-const img = new Image();
-img.onload = () => { state.img = img; state.bgBlur = makeBlur(img); };
-img.src = data.image.url;
+// One picture, or several that switch on the beat (all the same shape).
+state.switchEvery = data.settings.switchEvery || 'beat';
+(() => {
+  const list = Array.isArray(data.images) && data.images.length > 1 ? data.images : [data.image];
+  const loaded = new Array(list.length).fill(null);
+  list.forEach((p, i) => {
+    const im = new Image();
+    im.onload = () => {
+      loaded[i] = im;
+      if (i === 0) engine.setImages([im]);                              // show the first one straight away
+      if (loaded.every(Boolean) && list.length > 1) engine.setImages(loaded); // then switch once all are in
+    };
+    im.src = p.url;
+  });
+})();
 
 // Web Audio needs CORS; if the store doesn't send it, go through /api/media.
 let usedProxy = false;

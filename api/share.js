@@ -39,7 +39,22 @@ function cleanSettings(s = {}) {
     intensity: num(s.intensity, 0, 1, 0.45),
     sensitivity: num(s.sensitivity, 0, 1, 0.55),
     mode: ['beat', 'kick', 'hits'].includes(s.mode) ? s.mode : 'beat',
+    switchEvery: ['beat', '2beats', 'bar', '2bars'].includes(s.switchEvery) ? s.switchEvery : 'beat',
   };
+}
+
+// Several pictures (switched on the beat): up to 10, all in our store.
+// Returns [{ url, width, height }], [] for none/one, or null if invalid.
+const MAX_PICTURES = 10;
+function pictures(list) {
+  if (list === undefined || list === null) return [];
+  if (!Array.isArray(list) || list.length > MAX_PICTURES) return null;
+  const out = [];
+  for (const p of list) {
+    if (!p || !isOurMediaUrl(p.url)) return null;
+    out.push({ url: p.url, width: num(p.width, 1, 10000, 1000), height: num(p.height, 1, 10000, 1000) });
+  }
+  return out.length > 1 ? out : [];
 }
 
 function randomId(n = 10) {
@@ -59,6 +74,9 @@ export async function POST(request) {
   const artist = str(m.artist, 120);
   if (!title || !artist) return json({ error: 'Song name and artist are required' }, 400);
   if (!isOurMediaUrl(m.image?.url) || !isOurMediaUrl(m.audio?.url)) return json({ error: 'Upload the files first' }, 400);
+  const images = pictures(m.images);
+  if (images === null) return json({ error: 'Up to 10 pictures, uploaded first' }, 400);
+  if (images.length && images[0].url !== m.image.url) return json({ error: 'Bad request' }, 400);
 
   const a = m.analysis;
 
@@ -80,6 +98,7 @@ export async function POST(request) {
     website: website(m.website),
     links: cleanLinks(m.links),
     image: { url: m.image.url, width: num(m.image.width, 1, 10000, 1000), height: num(m.image.height, 1, 10000, 1000) },
+    ...(images.length ? { images } : {}),
     audio: {
       url: m.audio.url,
       type: str(m.audio.type, 40) || 'audio/mpeg',
@@ -139,11 +158,16 @@ export async function PATCH(request) {
   const title = str(b.title, 120);
   const artist = str(b.artist, 120);
   if (!title || !artist) return json({ error: 'Song name and artist are required' }, 400);
-  let oldImage = null;
+  let oldImages = [];
   if (b.image && b.image.url !== m.image.url) {
     if (!isOurMediaUrl(b.image.url)) return json({ error: 'Upload the picture first' }, 400);
-    oldImage = m.image.url;
+    const imgs = pictures(b.images);
+    if (imgs === null || (imgs.length && imgs[0].url !== b.image.url)) return json({ error: 'Up to 10 pictures, uploaded first' }, 400);
+    const before = [m.image.url, ...(m.images || []).map((x) => x.url)];
     m.image = { url: b.image.url, width: num(b.image.width, 1, 10000, 1000), height: num(b.image.height, 1, 10000, 1000) };
+    if (imgs.length) m.images = imgs; else delete m.images;
+    const keep = new Set([m.image.url, ...(m.images || []).map((x) => x.url)]);
+    oldImages = [...new Set(before)].filter((u) => !keep.has(u));
   }
   m.title = title;
   m.artist = artist;
@@ -156,7 +180,7 @@ export async function PATCH(request) {
 
   await putJSON(sharePath(id), m, auth, { overwrite: true });
   await putJSON(ownerIndexPath(user.userId, id), indexEntry(m), auth, { overwrite: true });
-  if (oldImage) await deletePaths([oldImage], auth).catch((e) => console.error('old cover delete failed', e));
+  if (oldImages.length) await deletePaths(oldImages, auth).catch((e) => console.error('old pictures delete failed', e));
   const origin = new URL(request.url).origin;
   return json({ id, url: `${origin}/s/${id}`, updatedAt: m.updatedAt });
 }

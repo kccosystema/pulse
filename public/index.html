@@ -116,9 +116,9 @@
   <p class="sub">Pick a picture and a song. Everything stays on your phone until you share.</p>
 
   <label class="pick" id="pickImage">
-    <input type="file" accept="image/*" id="imageInput" hidden>
+    <input type="file" accept="image/*" id="imageInput" multiple hidden>
     <span class="thumb" id="imageThumb">🖼️</span>
-    <span class="txt"><b>Image</b><small id="imageName">Tap to choose</small></span>
+    <span class="txt"><b>Pictures</b><small id="imageName">Tap to choose · pick several to switch on the beat</small></span>
   </label>
 
   <label class="pick" id="pickAudio">
@@ -142,7 +142,7 @@
   <section class="how">
     <h2>How it works</h2>
     <ol class="steps icons">
-      <li><img src="/img/icons/editing.webp" width="52" height="52" alt="" loading="lazy"><b>Pick a picture</b><span>Cover art, a photo, a flyer.</span></li>
+      <li><img src="/img/icons/editing.webp" width="52" height="52" alt="" loading="lazy"><b>Pick your pictures</b><span>Cover art, photos, a flyer. Pick several and they switch on the beat.</span></li>
       <li><img src="/img/icons/studio-files.webp" width="52" height="52" alt="" loading="lazy"><b>Add your song</b><span>MP3 or a studio WAV. We find the beat.</span></li>
       <li><img src="/img/icons/video-export.webp" width="52" height="52" alt="" loading="lazy"><b>Share or record</b><span>Get a link, or save a video.</span></li>
     </ol>
@@ -168,6 +168,13 @@
     <label>Strength <input type="range" id="intensity" min="0" max="100" value="45"></label>
     <label id="sensLabel">Sensitivity <input type="range" id="sensitivity" min="0" max="100" value="55"></label>
     <label><span class="lab">Offset <span id="offsetVal">0 ms</span></span><input type="range" id="offset" min="-300" max="300" step="10" value="0" aria-label="Sync offset: move right if the picture moves before the beat"></label>
+  </div>
+  <div class="row seg" id="switchRow" hidden>
+    <span class="lbl">Switch pics</span>
+    <button data-switch="beat">Beat</button>
+    <button data-switch="2beats">2 beats</button>
+    <button data-switch="bar">Bar</button>
+    <button data-switch="2bars">2 bars</button>
   </div>
   <div class="row presets">
     <span class="lbl">Presets</span>
@@ -269,8 +276,8 @@
     <form id="saveForm">
       <p class="note">Updates your existing link. Anyone who opens it will see the new version (it can take up to a minute to show up).</p>
       <div class="row">
-        <button type="button" id="changePicBtn">Change picture</button>
-        <input type="file" accept="image/*" id="changePicInput" hidden>
+        <button type="button" id="changePicBtn">Change pictures</button>
+        <input type="file" accept="image/*" id="changePicInput" multiple hidden>
       </div>
       <p class="note" id="savePicNote"></p>
       <label class="check"><input type="checkbox" id="e_feature" checked> Show on the PulsePic homepage</label>

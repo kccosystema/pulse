@@ -17,6 +17,8 @@ const engine = {
 
 const state = {
   img: null,
+  images: [],       // several pictures: [{ src }] in order; switched on the beat
+  switchEvery: 'beat', // 'beat' | '2beats' | 'bar' | '2bars'
   bgBlur: null,
   channels: null,   // red/green/blue copies of the image, for the RGB split
   audioURL: null,
@@ -186,7 +188,49 @@ function firstAfter(evs, t) {
   return lo;
 }
 
+// ── several pictures: which one shows at time t ──
+// Counted from the beat timeline (not from frames), so playback, seeking,
+// the share page and video export all agree on the same picture.
+const SWITCH = { beat: [1, false], '2beats': [2, false], bar: [1, true], '2bars': [2, true] };
+const chanCache = new WeakMap();
+let downsFor = null, downs = [];
+function countUpTo(list, t) {
+  let lo = 0, hi = list.length; // number of items with .t <= t
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (list[mid].t <= t) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+function slideIndex(t) {
+  const n = state.images.length;
+  if (n < 2 || !state.analysis || !state.analysis.beats) return 0;
+  const [per, bars] = SWITCH[state.switchEvery] || SWITCH.beat;
+  let list = state.analysis.beats;
+  if (bars) {
+    if (downsFor !== list) { downsFor = list; downs = list.filter((b) => b.down); }
+    if (downs.length) list = downs;
+  }
+  return Math.floor(countUpTo(list, t) / per) % n;
+}
+function applySlide(t) {
+  if (state.images.length < 2) return;
+  const s = state.images[slideIndex(t)];
+  if (!s || state.img === s.src) return;
+  state.img = s.src;
+  state.bgBlur = s.blur || (s.blur = makeBlur(s.src));
+  state.channels = chanCache.get(s.src) || null;
+}
+// Pages call this after changing state.images (or the switch setting).
+engine.setImages = (list) => {
+  state.images = (list || []).map((src) => ({ src }));
+  if (!state.images.length) return;
+  const first = state.images[0];
+  state.img = first.src;
+  state.bgBlur = first.blur = makeBlur(first.src);
+  state.channels = chanCache.get(first.src) || null;
+  applySlide(audio.currentTime || 0);
+};
+
 function dispatch(t, now) {
+  applySlide(t);
   const evs = currentEvents();
   if (!evs) return;
   if (evs !== lastEvents || t < lastHeard - 0.05 || t > lastHeard + 0.5) {
@@ -349,6 +393,7 @@ function frame(now) {
   } else {
     state.level *= 0.9;
     for (let i = 0; i < bars.length; i++) bars[i] *= 0.9;
+    applySlide((audio.currentTime || 0) - state.offset / 1000 - state.audioDelay); // follow seeks while paused
   }
   decay(dt);
 
@@ -454,7 +499,7 @@ function draw(now, dt) {
   c.shadowBlur = 0;
   c.clip();
   if (fx.rgb && p > 0.04) {
-    if (!state.channels) state.channels = makeChannels(img);
+    if (!state.channels) { state.channels = makeChannels(img); chanCache.set(img, state.channels); }
     const off = ((4 + 18 * k) * p * U) / scale;
     c.globalCompositeOperation = 'lighter';
     drawSource(c, state.channels[0], -off, -off * 0.3, w, h, fx.round);

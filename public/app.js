@@ -19,31 +19,53 @@ const PRESETS = {
 
 // ───────────────────────── file pickers ─────────────────────────
 
-$('imageInput').addEventListener('change', (e) => { if (e.target.files[0]) useImageFile(e.target.files[0]); });
+$('imageInput').addEventListener('change', (e) => { if (e.target.files.length) useImageFiles([...e.target.files]); e.target.value = ''; });
 $('audioInput').addEventListener('change', (e) => { if (e.target.files[0]) useAudioFile(e.target.files[0]); });
 
-function useImageFile(file) {
-  return new Promise((resolve) => {
-    if (state.imageURL) URL.revokeObjectURL(state.imageURL);
-    state.imageURL = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      state.img = img;
-      state.imageFile = file;
-      state.shareLink = null;
-      state.bgBlur = makeBlur(img);
-      state.channels = null;
-      $('imageThumb').style.backgroundImage = `url("${state.imageURL}")`;
-      $('imageThumb').textContent = '';
-      $('imageName').textContent = file.name || 'Picture';
-      $('pickImage').classList.add('done');
-      updateStart();
-      resolve(true);
-    };
-    img.onerror = () => { toast('Could not open that image'); resolve(false); };
-    img.src = state.imageURL;
-  });
+const MAX_PICTURES = 10;
+const loadImg = (url) => new Promise((resolve, reject) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = reject; im.src = url; });
+
+// Later pictures are cropped (centred) to the first picture's shape, so the
+// picture stays the same size on screen as it switches on the beat.
+function fitToShape(img, aspect) {
+  let sw = img.width, sh = img.height, sx = 0, sy = 0;
+  if (sw / sh > aspect) { sw = sh * aspect; sx = (img.width - sw) / 2; } else { sh = sw / aspect; sy = (img.height - sh) / 2; }
+  const scale = Math.min(1, 1600 / Math.max(sw, sh));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale));
+  c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  return c;
 }
+
+// One or more pictures (up to 10). With several, they switch on the beat.
+async function useImageFiles(files) {
+  files = files.filter((f) => f && (!f.type || f.type.startsWith('image/')));
+  if (!files.length) return false;
+  if (files.length > MAX_PICTURES) { toast(`Using the first ${MAX_PICTURES} pictures`); files = files.slice(0, MAX_PICTURES); }
+  const urls = files.map((f) => URL.createObjectURL(f));
+  const imgs = await Promise.all(urls.map((u) => loadImg(u).catch(() => null)));
+  const ok = files.map((f, i) => ({ f, img: imgs[i], url: urls[i] })).filter((x) => x.img);
+  urls.forEach((u, i) => { if (!ok[0] || u !== ok[0].url) URL.revokeObjectURL(u); });
+  if (!ok.length) { toast('Could not open that picture'); return false; }
+  if (ok.length < files.length) toast('Some pictures couldn’t be opened and were skipped');
+  if (state.imageURL) URL.revokeObjectURL(state.imageURL);
+  state.imageURL = ok[0].url;
+  const first = ok[0].img, aspect = first.width / first.height;
+  const srcs = [first, ...ok.slice(1).map((x) => fitToShape(x.img, aspect))];
+  state.imageFile = ok[0].f;
+  state.imageFiles = ok.map((x) => x.f);
+  state.shareLink = null;
+  engine.setImages(srcs);
+  $('imageThumb').style.backgroundImage = `url("${state.imageURL}")`;
+  $('imageThumb').textContent = '';
+  $('imageThumb').dataset.count = srcs.length > 1 ? `×${srcs.length}` : '';
+  $('imageName').textContent = srcs.length > 1 ? `${srcs.length} pictures · they switch on the beat` : (ok[0].f.name || 'Picture');
+  $('pickImage').classList.add('done');
+  $('switchRow').hidden = srcs.length < 2;
+  updateStart();
+  return true;
+}
+const useImageFile = (file) => useImageFiles([file]);
 
 // `restored` = { rawAnalysis } when coming back from sign-in (skips re-analysis
 // and keeps the details the user already entered).
@@ -573,9 +595,9 @@ async function createShare(progress) {
   }
   if (song.blob.size > MAX_SONG) throw userError('That song is too long to share (over 40 MB even after compressing).');
 
-  progress('Preparing cover…', 0.35);
-  const cover = await coverJpeg(state.img);
-  const img = await uploadFile(cfg, 'img', cover.blob, 'cover.jpg', 'image/jpeg', (p) => progress('Uploading cover…', 0.35 + p * 0.05));
+  progress('Preparing pictures…', 0.35);
+  const pics = await uploadPictures(cfg, (p, n, total) => progress(total > 1 ? `Uploading pictures… ${n}/${total}` : 'Uploading cover…', 0.35 + p * 0.05));
+  const img = { url: pics[0].url }, cover = pics[0];
   const up = await uploadFile(cfg, 'audio', song.blob, song.name, song.type, (p) => progress(`Uploading song… ${Math.round(p * 100)}%`, 0.4 + p * 0.55));
 
   progress('Creating link…', 0.97);
@@ -584,8 +606,9 @@ async function createShare(progress) {
     v: 1,
     title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {},
     image: { url: img.url, width: cover.width, height: cover.height },
+    images: pics.length > 1 ? pics : undefined,
     audio: { url: up.url, type: song.type, duration: isFinite(audio.duration) ? audio.duration : null, delay: song.delay },
-    settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode },
+    settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode, switchEvery: state.switchEvery },
     featured: $('s_feature').checked,
     analysis: r ? {
       bpm: r.bpm,
@@ -621,6 +644,19 @@ async function uploadFile(cfg, kind, blob, name, type, onProgress) {
   } catch (err) {
     throw userError(/size|large/i.test(err.message) ? 'That file is too large to share.' : 'Upload failed. Check your connection and try again.');
   }
+}
+
+// Every picture as a JPEG, uploaded in order: [{ url, width, height }].
+async function uploadPictures(cfg, onProgress) {
+  const srcs = state.images.length ? state.images.map((x) => x.src) : [state.img];
+  const out = [];
+  for (let i = 0; i < srcs.length; i++) {
+    const c = await coverJpeg(srcs[i]);
+    const up = await uploadFile(cfg, 'img', c.blob, i ? `cover-${i + 1}.jpg` : 'cover.jpg', 'image/jpeg',
+      (p) => onProgress((i + p) / srcs.length, i + 1, srcs.length));
+    out.push({ url: up.url, width: c.width, height: c.height });
+  }
+  return out;
 }
 
 // Re-encode the picture as a JPEG (max 1600 px) so the share page loads fast.
@@ -698,11 +734,20 @@ function guessAudioType(name) {
   return { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac', webm: 'audio/webm' }[ext] || 'audio/mpeg';
 }
 
+// "Switch pictures": how often the pictures change.
+function syncSwitch() {
+  document.querySelectorAll('[data-switch]').forEach((b) => b.classList.toggle('on', b.dataset.switch === state.switchEvery));
+}
+document.querySelectorAll('[data-switch]').forEach((b) => b.addEventListener('click', () => {
+  state.switchEvery = b.dataset.switch;
+  syncSwitch(); save();
+}));
+
 function save() {
   try {
     localStorage.setItem('pulse:settings', JSON.stringify({
       fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, offset: state.offset, mode: state.mode,
-      showCredits: state.showCredits,
+      showCredits: state.showCredits, switchEvery: state.switchEvery,
     }));
   } catch {}
 }
@@ -716,8 +761,10 @@ function save() {
       state.offset = s.offset ?? 0;
       if (['beat', 'kick', 'hits'].includes(s.mode)) state.mode = s.mode;
       if (typeof s.showCredits === 'boolean') state.showCredits = s.showCredits;
+      if (['beat', '2beats', 'bar', '2bars'].includes(s.switchEvery)) state.switchEvery = s.switchEvery;
     }
   } catch {}
+  syncSwitch();
   $('intensity').value = Math.round(state.intensity * 100);
   $('sensitivity').value = Math.round(state.sensitivity * 100);
   $('offset').value = state.offset;
@@ -740,12 +787,16 @@ async function startEdit(id) {
     const res = await authFetch(`/api/share?id=${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error(`load ${res.status}`);
     const m = await res.json();
-    const pic = await fetch(viaProxy(m.image.url));
-    if (!pic.ok) throw new Error('picture');
-    const blob = await pic.blob();
+    const list = Array.isArray(m.images) && m.images.length ? m.images : [m.image];
+    const files = await Promise.all(list.map(async (im, i) => {
+      const pic = await fetch(viaProxy(im.url));
+      if (!pic.ok) throw new Error('picture');
+      const blob = await pic.blob();
+      return new File([blob], i ? `cover-${i + 1}.jpg` : 'cover.jpg', { type: blob.type || 'image/jpeg' });
+    }));
     if (state.recorder) stopRecording();
     audio.pause();
-    await useImageFile(new File([blob], 'cover.jpg', { type: blob.type || 'image/jpeg' }));
+    await useImageFiles(files);
 
     // The song streams from storage through our own origin, so Web Audio
     // effects and recording keep working.
@@ -769,6 +820,7 @@ async function startEdit(id) {
     detailsTouched = true;
     applyDetails();
     const st = m.settings || {};
+    if (['beat', '2beats', 'bar', '2bars'].includes(st.switchEvery)) { state.switchEvery = st.switchEvery; syncSwitch(); }
     state.fx = { ...(st.fx || {}) };
     if (typeof st.intensity === 'number') state.intensity = st.intensity;
     if (typeof st.sensitivity === 'number') state.sensitivity = st.sensitivity;
@@ -811,11 +863,11 @@ function openSaveSheet() {
 
 $('changePicBtn').addEventListener('click', () => $('changePicInput').click());
 $('changePicInput').addEventListener('change', async (e) => {
-  const f = e.target.files[0];
-  if (!f || !editing) return;
-  if (await useImageFile(f)) {
+  const fs = [...e.target.files];
+  if (!fs.length || !editing) return;
+  if (await useImageFiles(fs)) {
     editing.imageChanged = true;
-    $('savePicNote').textContent = 'New picture will be uploaded.';
+    $('savePicNote').textContent = fs.length > 1 ? `${state.images.length} new pictures will be uploaded.` : 'New picture will be uploaded.';
   }
   e.target.value = '';
 });
@@ -827,24 +879,23 @@ $('saveForm').addEventListener('submit', async (e) => {
   $('saveBtn').disabled = true;
   $('saveError').hidden = true;
   try {
-    let image;
+    let image, images;
     if (editing.imageChanged) {
       $('saveProgress').hidden = false;
       const cfg = await fetch('/api/config').then((r) => r.json());
-      const cover = await coverJpeg(state.img);
-      const up = await uploadFile(cfg, 'img', cover.blob, 'cover.jpg', 'image/jpeg', (p) => {
-        $('saveProgressBar').style.width = `${Math.round(p * 100)}%`;
-      });
-      image = { url: up.url, width: cover.width, height: cover.height };
+      const pics = await uploadPictures(cfg, (p) => { $('saveProgressBar').style.width = `${Math.round(p * 100)}%`; });
+      image = pics[0];
+      images = pics;
     }
     const res = await authFetch(`/api/share?id=${encodeURIComponent(editing.id)}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {},
-        settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode },
+        settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode, switchEvery: state.switchEvery },
         featured: $('e_feature').checked,
         image,
+        images,
       }),
     });
     const out = await res.json().catch(() => ({}));
@@ -1037,6 +1088,7 @@ function goHome() {
 makeDraft = (pending) => (state.imageFile && state.audioFile ? {
   pending,
   image: state.imageFile,
+  images: state.imageFiles,
   audio: state.audioFile,
   details: { ...details },
   showCredits: state.showCredits,
@@ -1061,7 +1113,7 @@ async function restoreDraft() {
   if (!d) return;
   await clearDraft();
   if (!d.pending || Date.now() - d.at > 30 * 60 * 1000 || !d.image || !d.audio) return;
-  await useImageFile(d.image);
+  await useImageFiles(d.images && d.images.length ? d.images : [d.image]);
   useAudioFile(d.audio, { rawAnalysis: d.rawAnalysis });
   Object.assign(details, d.details || {});
   detailsTouched = true;

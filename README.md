@@ -111,3 +111,7 @@ Under the picture on every share page: a ♥ like button and a 💬 comments but
 - **Listen on buttons**: each song stores its own `links` (copied from the artist, editable per song). Only real pages on those services are accepted (`lib/stream-links.js`, checked in the app and again on the server and when the page renders).
 - **Trust**: a line at the upload step and in the share sheet, and the Terms & Copyright page at `/terms` (built by `npm run blog`).
 - **Reports** (`/api/report`, table `reports`): a Report link on every share page (reason, details, optional email; 5 per network address per day). Admin → Reports lists them with the song, Mark handled and Delete song; the tab shows a badge with the open count.
+
+## Several pictures that switch on the beat
+
+Pick up to 10 pictures. Later ones are cropped to the first picture's shape so the size stays steady. The **Switch pics** setting (Beat / 2 beats / Bar / 2 bars, saved as `settings.switchEvery`) decides how often they change. The engine picks the picture from the beat timeline (`slideIndex(t)` in `engine.js`), so playback, seeking, share pages and video export all show the same picture at the same moment. Share manifests keep `image` (the first, used for link previews) plus `images[]` when there are several; editing replaces them and deletes the old files.
