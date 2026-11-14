@@ -159,6 +159,7 @@ async function exportVideoFast(mb, { width, height, start, duration, onCanvas, o
       if (cancelled) break;
       const t = start + i * dt;
       const now = i * 1000 * dt;
+      if (engine.prepareFrame) await engine.prepareFrame(t);
       if (state.analysis) dispatch(t, now);
       levelsFrom(spectrumBytes(mono, AN_N + Math.round(i * dt * sr)), binHz);
       decay(dt);

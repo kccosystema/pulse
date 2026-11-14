@@ -18,7 +18,7 @@ const PORT = +process.env.PORT || 4400;
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png',
-  '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.wasm': 'application/wasm',
+  '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.wasm': 'application/wasm', '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm',
 };
 
 async function sendFile(req, res, file) {
@@ -62,7 +62,7 @@ http.createServer(async (req, res) => {
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ storage: 'local', auth: { mode: 'dev' } }));
     } else if (p === '/api/dev-upload' && req.method === 'PUT') {
       const pathname = url.searchParams.get('pathname') || '';
-      if (!/^media\/(img|audio)\/[\w.-]+$/.test(pathname)) { res.writeHead(400).end(); return; }
+      if (!/^media\/(img|audio|video)\/[\w.-]+$/.test(pathname)) { res.writeHead(400).end(); return; }
       const named = pathname.replace(/(\.[\w]+)$/, `-${randomBytes(4).toString('hex')}$1`);
       await mkdir(path.dirname(path.join(DATA, named)), { recursive: true });
       await writeFile(path.join(DATA, named), await readBody(req));

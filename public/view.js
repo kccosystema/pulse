@@ -61,16 +61,29 @@ state.switchEvery = data.settings.switchEvery || 'beat'; // links made before tr
 state.transition = data.settings.transition || 'cut';
 if (typeof data.settings.transitionLen === 'number') state.transitionLen = data.settings.transitionLen;
 (() => {
-  const list = Array.isArray(data.images) && data.images.length > 1 ? data.images : [data.image];
+  const many = Array.isArray(data.images) && (data.images.length > 1 || data.images.some((x) => x.kind === 'video'));
+  const list = many ? data.images : [data.image];
   const loaded = new Array(list.length).fill(null);
+  // Cover first (a still), so something shows while clips load.
+  const cover = new Image();
+  cover.onload = () => { if (!state.img) engine.setImages([cover]); };
+  cover.src = data.image.url;
+  const ready = () => { if (loaded.every(Boolean) && many) engine.setImages(loaded); };
   list.forEach((p, i) => {
-    const im = new Image();
-    im.onload = () => {
-      loaded[i] = im;
-      if (i === 0) engine.setImages([im]);                              // show the first one straight away
-      if (loaded.every(Boolean) && list.length > 1) engine.setImages(loaded); // then switch once all are in
-    };
-    im.src = p.url;
+    if (p.kind === 'video') {
+      const v = document.createElement('video');
+      v.muted = true; v.defaultMuted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+      v.preload = 'auto';
+      v.addEventListener('loadeddata', () => { loaded[i] = { video: v, crop: p.crop, dur: p.duration }; ready(); }, { once: true });
+      v.addEventListener('error', () => { loaded[i] = cover; ready(); }, { once: true }); // a clip that won't play shows the cover
+      v.src = p.url;
+      v.load();
+    } else {
+      const im = new Image();
+      im.onload = () => { loaded[i] = im; if (!many && i === 0) engine.setImages([im]); ready(); };
+      im.onerror = () => { loaded[i] = cover; ready(); };
+      im.src = p.url;
+    }
   });
 })();
 

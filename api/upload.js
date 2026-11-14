@@ -14,6 +14,8 @@ const RULES = {
       'audio/wave', 'audio/ogg', 'audio/flac', 'audio/x-flac', 'audio/webm'],
     max: 40 * MB,
   },
+  // Short clips in the picture mix (converted to small MP4s on the phone first).
+  video: { types: ['video/mp4', 'video/quicktime', 'video/webm'], max: 25 * MB },
 };
 
 export async function POST(request) {
@@ -31,7 +33,7 @@ export async function POST(request) {
       request,
       webhookPublicKey: process.env.BLOB_WEBHOOK_PUBLIC_KEY || 'unused-no-upload-callbacks',
       getSignedToken: async (pathname) => {
-        const m = /^media\/(img|audio)\/[a-z0-9][a-z0-9._-]{0,80}$/i.exec(pathname);
+        const m = /^media\/(img|audio|video)\/[a-z0-9][a-z0-9._-]{0,80}$/i.exec(pathname);
         if (!m) throw new Error('Invalid file name');
         const rule = RULES[m[1]];
         const validUntil = Date.now() + 15 * 60 * 1000;

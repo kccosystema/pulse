@@ -228,7 +228,8 @@ function applySlide(t) {
   if (state.images.length < 2) { slideNow = null; return; }
   slideNow = slideInfo(t);
   const s = state.images[slideNow.idx];
-  if (!s || state.img === s.src) return;
+  if (s && s.video && !s.src) videoFrame(s);
+  if (!s || !s.src || state.img === s.src) return;
   state.img = s.src;
   state.bgBlur = slideBlur(s);
   state.channels = chanCache.get(s.src) || null;
@@ -245,6 +246,7 @@ function transitionSource() {
   const p = (slideT - slideNow.start) / slideNow.len;
   if (!(p >= 0 && p < 1)) return null;
   const a = state.images[slideNow.prev].src, b = state.images[slideNow.idx].src;
+  if (!a || !b) return null;
   const sc = Math.min(1, 1024 / Math.max(b.width, b.height));
   const w = Math.max(1, Math.round(b.width * sc)), h = Math.max(1, Math.round(b.height * sc));
   if (mix.width !== w || mix.height !== h) { mix.width = w; mix.height = h; }
@@ -271,10 +273,96 @@ function transitionSource() {
 }
 
 // Pages call this after changing state.images (or the switch setting).
+// ── video clips in the mix ──
+// A clip item is { video, crop: {x,y,w,h} (fractions), dur }; the engine copies
+// its current frame (cropped to the shared shape) into item.src every frame,
+// so effects and transitions treat it like a picture.
+let clipBox = null;
+function hostVideo(v) {
+  // iOS only decodes frames for videos that are in the page; keep them invisible.
+  if (!clipBox) {
+    clipBox = document.createElement('div');
+    clipBox.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.01;overflow:hidden;pointer-events:none;z-index:-1';
+    document.body.appendChild(clipBox);
+  }
+  if (v.parentNode !== clipBox) clipBox.appendChild(v);
+}
+function videoFrame(it) {
+  const v = it.video;
+  if (!v || v.readyState < 2 || !v.videoWidth) return false;
+  const c = it.crop || { x: 0, y: 0, w: 1, h: 1 };
+  const sw = v.videoWidth * c.w, sh = v.videoHeight * c.h;
+  if (!it.src || !it.src.width) {
+    const sc = Math.min(1, 720 / Math.max(sw, sh));
+    it.src = document.createElement('canvas');
+    it.src.width = Math.max(1, Math.round(sw * sc));
+    it.src.height = Math.max(1, Math.round(sh * sc));
+    it.src._video = true;
+  }
+  it.src.getContext('2d').drawImage(v, v.videoWidth * c.x, v.videoHeight * c.y, sw, sh, 0, 0, it.src.width, it.src.height);
+  return true;
+}
+const clipLen = (it) => Math.max(0.1, Math.min(it.dur || 15, it.video.duration || it.dur || 15));
+function clipTime(it, t, start) { const d = clipLen(it); return (((t - start) % d) + d) % d; }
+function clipDiff(it, a, b) { const d = clipLen(it), x = Math.abs(a - b) % d; return Math.min(x, d - x); }
+function currentSlide(t) { return state.images.length >= 2 ? (slideNow || slideInfo(t)) : { idx: 0, prev: -1, start: 0, len: 0 }; }
+function inTransition(info, t) { return state.transition !== 'cut' && info.prev >= 0 && t - info.start >= 0 && t - info.start < info.len; }
+// When the previous item started showing (for a clip that is fading out).
+const prevStart = (info) => (info.prev >= 0 ? slideInfo(info.start - 1e-3).start : 0);
+
+// Live playback: play the clip on screen in time with the song, pause the rest.
+function syncVideos(t, playing) {
+  if (offline || !state.images.some((it) => it.video)) return;
+  const info = currentSlide(t), trans = inTransition(info, t);
+  state.images.forEach((it, i) => {
+    const v = it.video;
+    if (!v) return;
+    const isCur = i === info.idx, isPrev = trans && i === info.prev;
+    if (!isCur && !isPrev) { if (!v.paused) v.pause(); return; }
+    const want = clipTime(it, t, isCur ? info.start : prevStart(info));
+    if (playing) {
+      if (v.paused) { v.currentTime = want; v.play().catch(() => {}); }
+      else if (clipDiff(it, v.currentTime, want) > 0.35 && !v.seeking) v.currentTime = want;
+    } else {
+      if (!v.paused) v.pause();
+      if (clipDiff(it, v.currentTime, want) > 0.08 && !v.seeking) v.currentTime = want;
+    }
+    videoFrame(it);
+  });
+}
+
+// Fast video export: seek each visible clip to the exact frame first.
+function seekTo(v, time) {
+  return new Promise((resolve) => {
+    if (Math.abs(v.currentTime - time) < 0.002 && v.readyState >= 2) { resolve(); return; }
+    const done = () => { clearTimeout(timer); v.removeEventListener('seeked', done); resolve(); };
+    const timer = setTimeout(done, 1500);
+    v.addEventListener('seeked', done);
+    v.currentTime = time;
+  });
+}
+engine.prepareFrame = async (t) => {
+  if (!state.images.some((it) => it.video)) return;
+  applySlide(t);
+  const info = currentSlide(t), trans = inTransition(info, t);
+  for (let i = 0; i < state.images.length; i++) {
+    const it = state.images[i];
+    if (!it.video) continue;
+    if (!it.video.paused) it.video.pause();
+    if (i !== info.idx && !(trans && i === info.prev)) continue;
+    await seekTo(it.video, clipTime(it, t, i === info.idx ? info.start : prevStart(info)));
+    videoFrame(it);
+  }
+};
+
+// Pages call this with pictures (img/canvas) and/or clips ({ video, crop, dur }).
 engine.setImages = (list) => {
-  state.images = (list || []).map((src) => ({ src }));
+  for (const it of state.images) if (it.video && !(list || []).some((x) => x && x.video === it.video)) it.video.pause();
+  state.images = (list || []).map((x) => (x && x.video ? { video: x.video, crop: x.crop, dur: x.dur, src: null } : { src: x }));
   if (!state.images.length) return;
+  for (const it of state.images) if (it.video) { hostVideo(it.video); videoFrame(it); }
   const first = state.images[0];
+  if (!first.src) return; // a clip that has no frame yet; picked up once it loads
   state.img = first.src;
   state.bgBlur = first.blur = makeBlur(first.src);
   state.channels = chanCache.get(first.src) || null;
@@ -449,6 +537,12 @@ function frame(now) {
   }
   decay(dt);
 
+  if (state.images.length) {
+    const playing = !!actx && !audio.paused;
+    syncVideos(playing ? heardTime(now) : (audio.currentTime || 0) - state.offset / 1000 - state.audioDelay, playing);
+    const one = state.images.length === 1 && state.images[0];
+    if (one && one.src && state.img !== one.src) { state.img = one.src; state.bgBlur = slideBlur(one); }
+  }
   draw(now, dt);
   engine.onFrame();
   requestAnimationFrame(frame);
@@ -551,7 +645,7 @@ function draw(now, dt) {
   c.fill();
   c.shadowBlur = 0;
   c.clip();
-  if (fx.rgb && p > 0.04 && !mixed) {
+  if (fx.rgb && p > 0.04 && !mixed && !img._video) {
     if (!state.channels) { state.channels = makeChannels(img); chanCache.set(img, state.channels); }
     const off = ((4 + 18 * k) * p * U) / scale;
     c.globalCompositeOperation = 'lighter';

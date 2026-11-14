@@ -54,9 +54,19 @@ function pictures(list) {
   const out = [];
   for (const p of list) {
     if (!p || !isOurMediaUrl(p.url)) return null;
-    out.push({ url: p.url, width: num(p.width, 1, 10000, 1000), height: num(p.height, 1, 10000, 1000) });
+    const item = { url: p.url, width: num(p.width, 1, 10000, 1000), height: num(p.height, 1, 10000, 1000) };
+    if (p.kind === 'video') {
+      if (!/\/media\/video\//.test(p.url)) return null;
+      item.kind = 'video';
+      item.duration = num(p.duration, 0.1, 15, 5);
+      const c = p.crop || {};
+      // Part of the clip to show, as fractions (0-1) of its width and height.
+      item.crop = { x: num(c.x, 0, 1, 0), y: num(c.y, 0, 1, 0), w: num(c.w, 0.01, 1, 1), h: num(c.h, 0.01, 1, 1) };
+    } else if (/\/media\/video\//.test(p.url)) return null;
+    out.push(item);
   }
-  return out.length > 1 ? out : [];
+  // Kept when there are several items, or a single clip (the cover image is separate then).
+  return out.length > 1 || out.some((x) => x.kind === 'video') ? out : [];
 }
 
 function randomId(n = 10) {
@@ -78,7 +88,7 @@ export async function POST(request) {
   if (!isOurMediaUrl(m.image?.url) || !isOurMediaUrl(m.audio?.url)) return json({ error: 'Upload the files first' }, 400);
   const images = pictures(m.images);
   if (images === null) return json({ error: 'Up to 10 pictures, uploaded first' }, 400);
-  if (images.length && images[0].url !== m.image.url) return json({ error: 'Bad request' }, 400);
+  if (images.length && images[0].kind !== 'video' && images[0].url !== m.image.url) return json({ error: 'Bad request' }, 400);
 
   const a = m.analysis;
 
@@ -164,7 +174,7 @@ export async function PATCH(request) {
   if (b.image && b.image.url !== m.image.url) {
     if (!isOurMediaUrl(b.image.url)) return json({ error: 'Upload the picture first' }, 400);
     const imgs = pictures(b.images);
-    if (imgs === null || (imgs.length && imgs[0].url !== b.image.url)) return json({ error: 'Up to 10 pictures, uploaded first' }, 400);
+    if (imgs === null || (imgs.length && imgs[0].kind !== 'video' && imgs[0].url !== b.image.url)) return json({ error: 'Up to 10 pictures, uploaded first' }, 400);
     const before = [m.image.url, ...(m.images || []).map((x) => x.url)];
     m.image = { url: b.image.url, width: num(b.image.width, 1, 10000, 1000), height: num(b.image.height, 1, 10000, 1000) };
     if (imgs.length) m.images = imgs; else delete m.images;

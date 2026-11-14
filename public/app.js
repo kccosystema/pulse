@@ -37,29 +37,80 @@ function fitToShape(img, aspect) {
   return c;
 }
 
-// One or more pictures (up to 10). With several, they switch on the beat.
+// ── short video clips ──
+const MAX_CLIP_SECONDS = 15;
+const isVideoFile = (f) => (f.type || '').startsWith('video/') || /\.(mp4|mov|m4v|webm)$/i.test(f.name || '');
+function loadClip(url) {
+  return new Promise((resolve, reject) => {
+    const v = document.createElement('video');
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+    v.preload = 'auto';
+    const timer = setTimeout(() => reject(new Error('clip timeout')), 15000);
+    v.addEventListener('loadeddata', () => { clearTimeout(timer); resolve(v); }, { once: true });
+    v.addEventListener('error', () => { clearTimeout(timer); reject(new Error('clip error')); }, { once: true });
+    v.src = url;
+    v.load();
+  });
+}
+// Fractions of the clip to show so it matches the first item's shape.
+function clipCrop(vw, vh, aspect) {
+  if (vw / vh > aspect) { const w = (aspect * vh) / vw; return { x: (1 - w) / 2, y: 0, w, h: 1 }; }
+  const h = vw / aspect / vh; return { x: 0, y: (1 - h) / 2, w: 1, h };
+}
+function clipThumb(v, crop) {
+  const c = document.createElement('canvas');
+  const sw = v.videoWidth * crop.w, sh = v.videoHeight * crop.h, sc = Math.min(1, 1600 / Math.max(sw, sh));
+  c.width = Math.max(1, Math.round(sw * sc)); c.height = Math.max(1, Math.round(sh * sc));
+  c.getContext('2d').drawImage(v, v.videoWidth * crop.x, v.videoHeight * crop.y, sw, sh, 0, 0, c.width, c.height);
+  return c;
+}
+
+// One or more pictures and/or short clips (up to 10). With several, they
+// switch on the beat; clips play muted for their turn.
 async function useImageFiles(files) {
-  files = files.filter((f) => f && (!f.type || f.type.startsWith('image/')));
+  files = files.filter((f) => f && (isVideoFile(f) || !f.type || f.type.startsWith('image/')));
   if (!files.length) return false;
-  if (files.length > MAX_PICTURES) { toast(`Using the first ${MAX_PICTURES} pictures`); files = files.slice(0, MAX_PICTURES); }
+  if (files.length > MAX_PICTURES) { toast(`Using the first ${MAX_PICTURES}`); files = files.slice(0, MAX_PICTURES); }
   const urls = files.map((f) => URL.createObjectURL(f));
-  const imgs = await Promise.all(urls.map((u) => loadImg(u).catch(() => null)));
-  const ok = files.map((f, i) => ({ f, img: imgs[i], url: urls[i] })).filter((x) => x.img);
-  urls.forEach((u, i) => { if (!ok[0] || u !== ok[0].url) URL.revokeObjectURL(u); });
-  if (!ok.length) { toast('Could not open that picture'); return false; }
-  if (ok.length < files.length) toast('Some pictures couldn’t be opened and were skipped');
-  if (state.imageURL) URL.revokeObjectURL(state.imageURL);
-  state.imageURL = ok[0].url;
-  const first = ok[0].img, aspect = first.width / first.height;
-  const srcs = [first, ...ok.slice(1).map((x) => fitToShape(x.img, aspect))];
-  state.imageFile = ok[0].f;
+  const loaded = await Promise.all(files.map((f, i) => (isVideoFile(f) ? loadClip(urls[i]) : loadImg(urls[i])).catch(() => null)));
+  const ok = files.map((f, i) => ({ f, el: loaded[i], url: urls[i], kind: isVideoFile(f) ? 'video' : 'image' })).filter((x) => x.el);
+  urls.forEach((u) => { if (!ok.some((x) => x.url === u && x.kind === 'video') && !(ok[0] && ok[0].url === u)) URL.revokeObjectURL(u); });
+  if (!ok.length) { toast('Could not open that file'); return false; }
+  if (ok.length < files.length) toast('Some files couldn’t be opened and were skipped');
+  if (state.imageURL && !(state.media || []).some((m) => m.url === state.imageURL)) URL.revokeObjectURL(state.imageURL);
+  for (const m of state.media || []) if (m.kind === 'video' && !ok.some((x) => x.url === m.url)) { m.el.pause(); URL.revokeObjectURL(m.url); }
+  const size = (x) => (x.kind === 'video' ? [x.el.videoWidth, x.el.videoHeight] : [x.el.width, x.el.height]);
+  const [fw, fh] = size(ok[0]);
+  const aspect = fw / fh;
+  const items = [], media = [];
+  for (let i = 0; i < ok.length; i++) {
+    const x = ok[i];
+    if (x.kind === 'video') {
+      const crop = clipCrop(x.el.videoWidth, x.el.videoHeight, aspect);
+      const dur = Math.min(MAX_CLIP_SECONDS, x.el.duration || MAX_CLIP_SECONDS);
+      items.push({ video: x.el, crop, dur });
+      media.push({ kind: 'video', file: x.f, url: x.url, el: x.el, crop, dur });
+    } else {
+      const src = i === 0 ? x.el : fitToShape(x.el, aspect);
+      items.push(src);
+      media.push({ kind: 'image', file: x.f, src });
+    }
+  }
+  const first = ok[0];
+  const thumb = first.kind === 'video' ? clipThumb(first.el, media[0].crop).toDataURL('image/jpeg', 0.7) : first.url;
+  state.imageURL = first.kind === 'video' ? null : first.url;
+  state.media = media;
+  state.imageFile = first.f;
   state.imageFiles = ok.map((x) => x.f);
   state.shareLink = null;
-  engine.setImages(srcs);
-  $('imageThumb').style.backgroundImage = `url("${state.imageURL}")`;
+  engine.setImages(items);
+  const clips = media.filter((m) => m.kind === 'video').length, pics = media.length - clips;
+  $('imageThumb').style.backgroundImage = `url("${thumb}")`;
   $('imageThumb').textContent = '';
-  $('imageThumb').dataset.count = srcs.length > 1 ? `×${srcs.length}` : '';
-  $('imageName').textContent = srcs.length > 1 ? `${srcs.length} pictures · they switch on the beat` : (ok[0].f.name || 'Picture');
+  $('imageThumb').dataset.count = media.length > 1 ? `×${media.length}` : clips ? '▶' : '';
+  const parts = [pics && `${pics} picture${pics > 1 ? 's' : ''}`, clips && `${clips} clip${clips > 1 ? 's' : ''}`].filter(Boolean).join(' + ');
+  $('imageName').textContent = media.length > 1 ? `${parts} · switch on the beat` : (first.f.name || (clips ? 'Clip' : 'Picture'));
+  if (media.some((m) => m.kind === 'video' && m.el.duration > MAX_CLIP_SECONDS + 0.5)) toast(`Clips use their first ${MAX_CLIP_SECONDS} seconds`);
   $('pickImage').classList.add('done');
   updatePicsTab();
   updateStart();
@@ -94,7 +145,7 @@ function useAudioFile(file, restored) {
 
 function updateStart() {
   const b = $('startBtn');
-  b.disabled = !(state.img && state.audioURL) || state.analyzing;
+  b.disabled = !((state.img || (state.media || []).length) && state.audioURL) || state.analyzing;
   b.textContent = state.analyzing ? 'Analyzing song…' : 'Start';
 }
 
@@ -581,7 +632,7 @@ const userError = (msg) => Object.assign(new Error(msg), { userMessage: msg });
 const MB = 1024 * 1024;
 
 async function createShare(progress) {
-  if (!state.img || !state.audioFile) throw userError('Pick an image and a song first.');
+  if (!(state.img || (state.media || []).length) || !state.audioFile) throw userError('Pick a picture and a song first.');
   if (state.analyzing) throw userError('Still analyzing the song — try again in a moment.');
   const cfg = await fetch('/api/config').then((r) => r.json()).catch(() => ({}));
   if (cfg.storage !== 'blob' && cfg.storage !== 'local') throw userError('Sharing is not set up on this server yet.');
@@ -597,8 +648,8 @@ async function createShare(progress) {
   if (song.blob.size > MAX_SONG) throw userError('That song is too long to share (over 40 MB even after compressing).');
 
   progress('Preparing pictures…', 0.35);
-  const pics = await uploadPictures(cfg, (p, n, total) => progress(total > 1 ? `Uploading pictures… ${n}/${total}` : 'Uploading cover…', 0.35 + p * 0.05));
-  const img = { url: pics[0].url }, cover = pics[0];
+  const up1 = await uploadPictures(cfg, (p, n, total) => progress(total > 1 ? `Uploading pictures & clips… ${n}/${total}` : 'Uploading cover…', 0.35 + p * 0.05));
+  const pics = up1.items, img = { url: up1.cover.url }, cover = up1.cover;
   const up = await uploadFile(cfg, 'audio', song.blob, song.name, song.type, (p) => progress(`Uploading song… ${Math.round(p * 100)}%`, 0.4 + p * 0.55));
 
   progress('Creating link…', 0.97);
@@ -607,7 +658,7 @@ async function createShare(progress) {
     v: 1,
     title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {},
     image: { url: img.url, width: cover.width, height: cover.height },
-    images: pics.length > 1 ? pics : undefined,
+    images: pics.length > 1 || pics.some((x) => x.kind === 'video') ? pics : undefined,
     audio: { url: up.url, type: song.type, duration: isFinite(audio.duration) ? audio.duration : null, delay: song.delay },
     settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode, switchEvery: state.switchEvery, transition: state.transition, transitionLen: state.transitionLen },
     featured: $('s_feature').checked,
@@ -647,17 +698,63 @@ async function uploadFile(cfg, kind, blob, name, type, onProgress) {
   }
 }
 
-// Every picture as a JPEG, uploaded in order: [{ url, width, height }].
-async function uploadPictures(cfg, onProgress) {
-  const srcs = state.images.length ? state.images.map((x) => x.src) : [state.img];
-  const out = [];
-  for (let i = 0; i < srcs.length; i++) {
-    const c = await coverJpeg(srcs[i]);
-    const up = await uploadFile(cfg, 'img', c.blob, i ? `cover-${i + 1}.jpg` : 'cover.jpg', 'image/jpeg',
-      (p) => onProgress((i + p) / srcs.length, i + 1, srcs.length));
-    out.push({ url: up.url, width: c.width, height: c.height });
+// A clip as a small MP4 for sharing: first 15 s, cropped to the shared
+// shape, at most 720 px, H.264, no sound. Falls back to the original file
+// (with its crop stored) if this browser can't convert.
+async function convertClip(m, onProgress) {
+  try {
+    const mb = fastLib || (fastLib = await import('/vendor/media-export.js'));
+    const vw = m.el.videoWidth, vh = m.el.videoHeight;
+    const crop = { left: Math.round(vw * m.crop.x), top: Math.round(vh * m.crop.y), width: Math.round(vw * m.crop.w), height: Math.round(vh * m.crop.h) };
+    const sc = Math.min(1, 720 / Math.max(crop.width, crop.height));
+    const even = (n) => Math.max(2, Math.round(n / 2) * 2);
+    const width = even(crop.width * sc), height = even(crop.height * sc);
+    const input = new mb.Input({ source: new mb.BlobSource(m.file), formats: mb.ALL_FORMATS });
+    const output = new mb.Output({ format: new mb.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new mb.BufferTarget() });
+    const conv = await mb.Conversion.init({
+      input, output,
+      video: { crop, width, height, fit: 'fill', codec: 'avc', bitrate: 1_800_000, frameRate: 30, forceTranscode: true },
+      audio: { discard: true },
+      trim: { start: 0, end: m.dur },
+    });
+    if (!conv.isValid) throw new Error('conversion not possible');
+    conv.onProgress = (p) => onProgress(p);
+    await conv.execute();
+    return { blob: new Blob([output.target.buffer], { type: 'video/mp4' }), width, height, crop: { x: 0, y: 0, w: 1, h: 1 }, name: 'clip.mp4', type: 'video/mp4' };
+  } catch (err) {
+    console.warn('clip conversion failed, using the original', err);
+    if (m.file.size > 25 * MB) throw userError('That clip is too big to share. Try a shorter clip.');
+    const ext = (/\.(mp4|mov|m4v|webm)$/i.exec(m.file.name || '') || [, 'mp4'])[1].toLowerCase();
+    const type = m.file.type || (ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : 'video/mp4');
+    return { blob: m.file, width: m.el.videoWidth, height: m.el.videoHeight, crop: m.crop, name: `clip.${ext === 'm4v' ? 'mp4' : ext}`, type };
   }
-  return out;
+}
+
+// Every picture as a JPEG and every clip as a small MP4, uploaded in order.
+// Returns { cover: { url, width, height }, items: [{ url, width, height, kind?, duration?, crop? }] }.
+async function uploadPictures(cfg, onProgress) {
+  const media = state.media && state.media.length ? state.media : [{ kind: 'image', src: state.img }];
+  const items = [];
+  for (let i = 0; i < media.length; i++) {
+    const m = media[i], step = (p) => onProgress((i + p) / (media.length + 1), i + 1, media.length);
+    if (m.kind === 'video') {
+      const c = await convertClip(m, (p) => step(p * 0.7));
+      const up = await uploadFile(cfg, 'video', c.blob, c.name.replace('clip', `clip-${i + 1}`), c.type, (p) => step(0.7 + p * 0.3));
+      items.push({ url: up.url, width: c.width, height: c.height, kind: 'video', duration: +m.dur.toFixed(2), crop: c.crop });
+    } else {
+      const c = await coverJpeg(m.src);
+      const up = await uploadFile(cfg, 'img', c.blob, i ? `cover-${i + 1}.jpg` : 'cover.jpg', 'image/jpeg', step);
+      items.push({ url: up.url, width: c.width, height: c.height });
+    }
+  }
+  // Link previews need a still: the first picture, or the first clip's opening frame.
+  let cover = items[0];
+  if (media[0].kind === 'video') {
+    const c = await coverJpeg(clipThumb(media[0].el, media[0].crop));
+    const up = await uploadFile(cfg, 'img', c.blob, 'cover.jpg', 'image/jpeg', (p) => onProgress((media.length + p) / (media.length + 1), media.length, media.length));
+    cover = { url: up.url, width: c.width, height: c.height };
+  }
+  return { cover, items };
 }
 
 // Re-encode the picture as a JPEG (max 1600 px) so the share page loads fast.
@@ -813,6 +910,7 @@ async function startEdit(id) {
       const pic = await fetch(viaProxy(im.url));
       if (!pic.ok) throw new Error('picture');
       const blob = await pic.blob();
+      if (im.kind === 'video') return new File([blob], `clip-${i + 1}.mp4`, { type: blob.type && blob.type.startsWith('video/') ? blob.type : 'video/mp4' });
       return new File([blob], i ? `cover-${i + 1}.jpg` : 'cover.jpg', { type: blob.type || 'image/jpeg' });
     }));
     if (state.recorder) stopRecording();
@@ -907,9 +1005,9 @@ $('saveForm').addEventListener('submit', async (e) => {
     if (editing.imageChanged) {
       $('saveProgress').hidden = false;
       const cfg = await fetch('/api/config').then((r) => r.json());
-      const pics = await uploadPictures(cfg, (p) => { $('saveProgressBar').style.width = `${Math.round(p * 100)}%`; });
-      image = pics[0];
-      images = pics;
+      const up1 = await uploadPictures(cfg, (p) => { $('saveProgressBar').style.width = `${Math.round(p * 100)}%`; });
+      image = up1.cover;
+      images = up1.items;
     }
     const res = await authFetch(`/api/share?id=${encodeURIComponent(editing.id)}`, {
       method: 'PATCH',
