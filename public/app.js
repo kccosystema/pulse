@@ -61,7 +61,7 @@ async function useImageFiles(files) {
   $('imageThumb').dataset.count = srcs.length > 1 ? `×${srcs.length}` : '';
   $('imageName').textContent = srcs.length > 1 ? `${srcs.length} pictures · they switch on the beat` : (ok[0].f.name || 'Picture');
   $('pickImage').classList.add('done');
-  $('switchRow').hidden = srcs.length < 2;
+  updatePicsTab();
   updateStart();
   return true;
 }
@@ -210,14 +210,15 @@ function syncUI() {
 }
 
 // Fold the effects grid away to give the picture more room.
-function setFxOpen(open) {
-  $('fxGrid').hidden = !open;
-  $('fxToggle').textContent = open ? 'Effects ▾' : 'Effects ▸';
-  $('fxToggle').setAttribute('aria-expanded', String(open));
-  try { localStorage.setItem('pulse:fxOpen', open ? '1' : '0'); } catch {}
+// Player tabs: Beat · Effects · Pictures (one at a time keeps the panel small).
+function showTab(name) {
+  document.querySelectorAll('[data-ptab]').forEach((b) => { const on = b.dataset.ptab === name; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+  document.querySelectorAll('[data-ppanel]').forEach((p) => { p.hidden = p.dataset.ppanel !== name; });
+  try { localStorage.setItem('pulse:tab', name); } catch {}
 }
-$('fxToggle').addEventListener('click', () => setFxOpen($('fxGrid').hidden));
-try { setFxOpen(localStorage.getItem('pulse:fxOpen') !== '0'); } catch { setFxOpen(true); }
+document.querySelectorAll('[data-ptab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.ptab)));
+try { showTab(localStorage.getItem('pulse:tab') || 'beat'); } catch { showTab('beat'); }
+
 
 // Hide controls for a clean full-screen view; tap anywhere to bring them back.
 $('hideBtn').addEventListener('click', (e) => {
@@ -608,7 +609,7 @@ async function createShare(progress) {
     image: { url: img.url, width: cover.width, height: cover.height },
     images: pics.length > 1 ? pics : undefined,
     audio: { url: up.url, type: song.type, duration: isFinite(audio.duration) ? audio.duration : null, delay: song.delay },
-    settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode, switchEvery: state.switchEvery },
+    settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode, switchEvery: state.switchEvery, transition: state.transition, transitionLen: state.transitionLen },
     featured: $('s_feature').checked,
     analysis: r ? {
       bpm: r.bpm,
@@ -734,20 +735,38 @@ function guessAudioType(name) {
   return { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac', webm: 'audio/webm' }[ext] || 'audio/mpeg';
 }
 
-// "Switch pictures": how often the pictures change.
+// Pictures tab: how often they switch, transition style and length.
+const SWITCHES = ['beat', '2beats', 'bar', '2bars', '4bars'];
+const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom', 'flash'];
 function syncSwitch() {
   document.querySelectorAll('[data-switch]').forEach((b) => b.classList.toggle('on', b.dataset.switch === state.switchEvery));
+  document.querySelectorAll('[data-trans]').forEach((b) => b.classList.toggle('on', b.dataset.trans === state.transition));
+  $('transLen').value = Math.round(state.transitionLen * 100);
+  $('transLenVal').textContent = `${+state.transitionLen.toFixed(2)} s`;
+  $('transLenLabel').classList.toggle('dim', state.transition === 'cut');
+}
+function updatePicsTab() {
+  const n = state.images.length;
+  $('picsHint').hidden = n > 1;
+  $('picsControls').hidden = n < 2;
+  $('picsCount').textContent = n > 1 ? String(n) : '';
 }
 document.querySelectorAll('[data-switch]').forEach((b) => b.addEventListener('click', () => {
-  state.switchEvery = b.dataset.switch;
-  syncSwitch(); save();
+  state.switchEvery = b.dataset.switch; syncSwitch(); save();
 }));
+document.querySelectorAll('[data-trans]').forEach((b) => b.addEventListener('click', () => {
+  state.transition = b.dataset.trans; syncSwitch(); save();
+}));
+$('transLen').addEventListener('input', () => { state.transitionLen = $('transLen').value / 100; syncSwitch(); });
+$('transLen').addEventListener('change', save);
+$('addPicsBtn').addEventListener('click', () => $('imageInput').click());
+$('changePicsBtn').addEventListener('click', () => (editing ? $('changePicInput') : $('imageInput')).click());
 
 function save() {
   try {
     localStorage.setItem('pulse:settings', JSON.stringify({
       fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, offset: state.offset, mode: state.mode,
-      showCredits: state.showCredits, switchEvery: state.switchEvery,
+      showCredits: state.showCredits, switchEvery: state.switchEvery, transition: state.transition, transitionLen: state.transitionLen,
     }));
   } catch {}
 }
@@ -761,10 +780,12 @@ function save() {
       state.offset = s.offset ?? 0;
       if (['beat', 'kick', 'hits'].includes(s.mode)) state.mode = s.mode;
       if (typeof s.showCredits === 'boolean') state.showCredits = s.showCredits;
-      if (['beat', '2beats', 'bar', '2bars'].includes(s.switchEvery)) state.switchEvery = s.switchEvery;
+      if (SWITCHES.includes(s.switchEvery)) state.switchEvery = s.switchEvery;
+      if (TRANSITIONS.includes(s.transition)) state.transition = s.transition;
+      if (typeof s.transitionLen === 'number') state.transitionLen = Math.min(1.5, Math.max(0.1, s.transitionLen));
     }
   } catch {}
-  syncSwitch();
+  syncSwitch(); updatePicsTab();
   $('intensity').value = Math.round(state.intensity * 100);
   $('sensitivity').value = Math.round(state.sensitivity * 100);
   $('offset').value = state.offset;
@@ -820,7 +841,10 @@ async function startEdit(id) {
     detailsTouched = true;
     applyDetails();
     const st = m.settings || {};
-    if (['beat', '2beats', 'bar', '2bars'].includes(st.switchEvery)) { state.switchEvery = st.switchEvery; syncSwitch(); }
+    if (SWITCHES.includes(st.switchEvery)) state.switchEvery = st.switchEvery;
+    if (TRANSITIONS.includes(st.transition)) state.transition = st.transition;
+    if (typeof st.transitionLen === 'number') state.transitionLen = st.transitionLen;
+    syncSwitch();
     state.fx = { ...(st.fx || {}) };
     if (typeof st.intensity === 'number') state.intensity = st.intensity;
     if (typeof st.sensitivity === 'number') state.sensitivity = st.sensitivity;
@@ -892,7 +916,7 @@ $('saveForm').addEventListener('submit', async (e) => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {},
-        settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode, switchEvery: state.switchEvery },
+        settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode, switchEvery: state.switchEvery, transition: state.transition, transitionLen: state.transitionLen },
         featured: $('e_feature').checked,
         image,
         images,

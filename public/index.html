@@ -157,46 +157,81 @@
     <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Seek">
     <span id="time" class="time">0:00</span>
   </div>
-  <div class="row seg">
-    <span class="lbl">Sync to</span>
-    <button data-mode="beat" class="on">Beat</button>
-    <button data-mode="kick">Kick</button>
-    <button data-mode="hits">All hits</button>
-    <span id="bpm" class="bpm">…</span>
+  <div class="ptabs" role="tablist" aria-label="Controls">
+    <button type="button" role="tab" data-ptab="beat" class="on" aria-selected="true">🎵 Beat</button>
+    <button type="button" role="tab" data-ptab="fx" aria-selected="false">✨ Effects</button>
+    <button type="button" role="tab" data-ptab="pics" aria-selected="false">🖼️ Pictures <span id="picsCount"></span></button>
   </div>
-  <div class="row sliders">
-    <label>Strength <input type="range" id="intensity" min="0" max="100" value="45"></label>
-    <label id="sensLabel">Sensitivity <input type="range" id="sensitivity" min="0" max="100" value="55"></label>
-    <label><span class="lab">Offset <span id="offsetVal">0 ms</span></span><input type="range" id="offset" min="-300" max="300" step="10" value="0" aria-label="Sync offset: move right if the picture moves before the beat"></label>
+
+  <div class="ppanel" data-ppanel="beat" role="tabpanel">
+    <div class="row seg">
+      <span class="lbl">Sync to</span>
+      <button data-mode="beat" class="on">Beat</button>
+      <button data-mode="kick">Kick</button>
+      <button data-mode="hits">All hits</button>
+      <span id="bpm" class="bpm">…</span>
+    </div>
+    <div class="row sliders">
+      <label>Strength <input type="range" id="intensity" min="0" max="100" value="45"></label>
+      <label id="sensLabel">Sensitivity <input type="range" id="sensitivity" min="0" max="100" value="55"></label>
+      <label><span class="lab">Offset <span id="offsetVal">0 ms</span></span><input type="range" id="offset" min="-300" max="300" step="10" value="0" aria-label="Sync offset: move right if the picture moves before the beat"></label>
+    </div>
   </div>
-  <div class="row seg" id="switchRow" hidden>
-    <span class="lbl">Switch pics</span>
-    <button data-switch="beat">Beat</button>
-    <button data-switch="2beats">2 beats</button>
-    <button data-switch="bar">Bar</button>
-    <button data-switch="2bars">2 bars</button>
+
+  <div class="ppanel" data-ppanel="fx" role="tabpanel" hidden>
+    <div class="row presets">
+      <span class="lbl">Presets</span>
+      <button class="chip" data-preset="chill">Chill</button>
+      <button class="chip" data-preset="club">Club</button>
+      <button class="chip" data-preset="hype">Hype</button>
+    </div>
+    <div class="fx-grid" id="fxGrid">
+      <button class="chip" data-fx="glow">Glow</button>
+      <button class="chip" data-fx="shake">Shake</button>
+      <button class="chip" data-fx="flash">Flash</button>
+      <button class="chip" data-fx="tilt">Tilt</button>
+      <button class="chip" data-fx="bounce">Bounce</button>
+      <button class="chip" data-fx="echo">Echo</button>
+      <button class="chip" data-fx="rings">Rings</button>
+      <button class="chip" data-fx="sparks">Sparks</button>
+      <button class="chip" data-fx="rgb">RGB split</button>
+      <button class="chip" data-fx="bars">Bars</button>
+      <button class="chip" data-fx="strobe">Strobe</button>
+      <button class="chip" data-fx="round">Circle</button>
+    </div>
   </div>
-  <div class="row presets">
-    <span class="lbl">Presets</span>
-    <button class="chip" data-preset="chill">Chill</button>
-    <button class="chip" data-preset="club">Club</button>
-    <button class="chip" data-preset="hype">Hype</button>
-    <button id="fxToggle" class="chip" aria-expanded="true" aria-controls="fxGrid">Effects ▾</button>
+
+  <div class="ppanel" data-ppanel="pics" role="tabpanel" hidden>
+    <div id="picsHint" class="pics-hint">
+      <p>Add 2–10 pictures and they switch on the beat.</p>
+      <button type="button" class="accent" id="addPicsBtn">Choose pictures</button>
+    </div>
+    <div id="picsControls" hidden>
+      <div class="row seg" id="switchRow">
+        <span class="lbl">Every</span>
+        <button data-switch="beat">Beat</button>
+        <button data-switch="2beats">2 beats</button>
+        <button data-switch="bar">Bar</button>
+        <button data-switch="2bars">2 bars</button>
+        <button data-switch="4bars">4 bars</button>
+      </div>
+      <div class="row seg" id="transRow">
+        <span class="lbl">Style</span>
+        <button data-trans="cut">Cut</button>
+        <button data-trans="fade">Fade</button>
+        <button data-trans="slide">Slide</button>
+        <button data-trans="zoom">Zoom</button>
+        <button data-trans="flash">Flash</button>
+      </div>
+      <div class="row len-row" id="transLenLabel">
+        <span class="lbl">Length</span>
+        <input type="range" id="transLen" min="10" max="150" step="5" value="40" aria-label="Transition length">
+        <span id="transLenVal" class="len-val">0.4 s</span>
+        <button type="button" id="changePicsBtn" class="pics-change">Change pics</button>
+      </div>
+    </div>
   </div>
-  <div class="fx-grid" id="fxGrid">
-    <button class="chip" data-fx="glow">Glow</button>
-    <button class="chip" data-fx="shake">Shake</button>
-    <button class="chip" data-fx="flash">Flash</button>
-    <button class="chip" data-fx="tilt">Tilt</button>
-    <button class="chip" data-fx="bounce">Bounce</button>
-    <button class="chip" data-fx="echo">Echo</button>
-    <button class="chip" data-fx="rings">Rings</button>
-    <button class="chip" data-fx="sparks">Sparks</button>
-    <button class="chip" data-fx="rgb">RGB split</button>
-    <button class="chip" data-fx="bars">Bars</button>
-    <button class="chip" data-fx="strobe">Strobe</button>
-    <button class="chip" data-fx="round">Circle</button>
-  </div>
+
   <div class="row actions">
     <button id="recordBtn">🎬 Video</button>
     <button id="shareBtn" class="accent">Share</button>

@@ -39,7 +39,9 @@ function cleanSettings(s = {}) {
     intensity: num(s.intensity, 0, 1, 0.45),
     sensitivity: num(s.sensitivity, 0, 1, 0.55),
     mode: ['beat', 'kick', 'hits'].includes(s.mode) ? s.mode : 'beat',
-    switchEvery: ['beat', '2beats', 'bar', '2bars'].includes(s.switchEvery) ? s.switchEvery : 'beat',
+    switchEvery: ['beat', '2beats', 'bar', '2bars', '4bars'].includes(s.switchEvery) ? s.switchEvery : 'bar',
+    transition: ['cut', 'fade', 'slide', 'zoom', 'flash'].includes(s.transition) ? s.transition : 'fade',
+    transitionLen: num(s.transitionLen, 0.1, 1.5, 0.4),
   };
 }
 

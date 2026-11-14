@@ -18,7 +18,9 @@ const engine = {
 const state = {
   img: null,
   images: [],       // several pictures: [{ src }] in order; switched on the beat
-  switchEvery: 'beat', // 'beat' | '2beats' | 'bar' | '2bars'
+  switchEvery: 'bar',  // 'beat' | '2beats' | 'bar' | '2bars' | '4bars'
+  transition: 'fade',  // 'cut' | 'fade' | 'slide' | 'zoom' | 'flash'
+  transitionLen: 0.4,  // seconds (shortened to fit when pictures switch quickly)
   bgBlur: null,
   channels: null,   // red/green/blue copies of the image, for the RGB split
   audioURL: null,
@@ -191,7 +193,7 @@ function firstAfter(evs, t) {
 // ── several pictures: which one shows at time t ──
 // Counted from the beat timeline (not from frames), so playback, seeking,
 // the share page and video export all agree on the same picture.
-const SWITCH = { beat: [1, false], '2beats': [2, false], bar: [1, true], '2bars': [2, true] };
+const SWITCH = { beat: [1, false], '2beats': [2, false], bar: [1, true], '2bars': [2, true], '4bars': [4, true] };
 const chanCache = new WeakMap();
 let downsFor = null, downs = [];
 function countUpTo(list, t) {
@@ -199,25 +201,75 @@ function countUpTo(list, t) {
   while (lo < hi) { const mid = (lo + hi) >> 1; if (list[mid].t <= t) lo = mid + 1; else hi = mid; }
   return lo;
 }
-function slideIndex(t) {
+// { idx, prev, start, len }: the picture at time t, the one before it and
+// when the switch happened (for the transition). prev = -1 before the first switch.
+function slideInfo(t) {
   const n = state.images.length;
-  if (n < 2 || !state.analysis || !state.analysis.beats) return 0;
-  const [per, bars] = SWITCH[state.switchEvery] || SWITCH.beat;
+  if (n < 2 || !state.analysis || !state.analysis.beats) return { idx: 0, prev: -1, start: 0, len: 0 };
+  const [per, bars] = SWITCH[state.switchEvery] || SWITCH.bar;
   let list = state.analysis.beats;
   if (bars) {
     if (downsFor !== list) { downsFor = list; downs = list.filter((b) => b.down); }
     if (downs.length) list = downs;
   }
-  return Math.floor(countUpTo(list, t) / per) % n;
+  const k = Math.floor(countUpTo(list, t) / per);
+  const idx = k % n;
+  if (k === 0) return { idx, prev: -1, start: 0, len: 0 };
+  const start = list[k * per - 1].t;
+  const next = list[k * per - 1 + per];
+  const gap = next ? next.t - start : per * (bars ? 4 : 1) * (60 / (state.analysis.bpm || 120));
+  return { idx, prev: (k - 1) % n, start, len: Math.min(state.transitionLen, gap * 0.85) };
 }
+const slideIndex = (t) => slideInfo(t).idx;
+let slideNow = null, slideT = 0;
+function slideBlur(s) { return s.blur || (s.blur = makeBlur(s.src)); }
 function applySlide(t) {
-  if (state.images.length < 2) return;
-  const s = state.images[slideIndex(t)];
+  slideT = t;
+  if (state.images.length < 2) { slideNow = null; return; }
+  slideNow = slideInfo(t);
+  const s = state.images[slideNow.idx];
   if (!s || state.img === s.src) return;
   state.img = s.src;
-  state.bgBlur = s.blur || (s.blur = makeBlur(s.src));
+  state.bgBlur = slideBlur(s);
   state.channels = chanCache.get(s.src) || null;
 }
+
+// During a transition: one canvas showing the old and new picture mixed by
+// the chosen style; the rest of the drawing (effects, glow, shapes) uses it.
+const mix = document.createElement('canvas');
+const mixCtx = mix.getContext('2d');
+const ease = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+function transitionSource() {
+  const tr = state.transition;
+  if (!slideNow || tr === 'cut' || slideNow.prev < 0 || !(slideNow.len > 0)) return null;
+  const p = (slideT - slideNow.start) / slideNow.len;
+  if (!(p >= 0 && p < 1)) return null;
+  const a = state.images[slideNow.prev].src, b = state.images[slideNow.idx].src;
+  const sc = Math.min(1, 1024 / Math.max(b.width, b.height));
+  const w = Math.max(1, Math.round(b.width * sc)), h = Math.max(1, Math.round(b.height * sc));
+  if (mix.width !== w || mix.height !== h) { mix.width = w; mix.height = h; }
+  const g = mixCtx, e = ease(p);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, w, h);
+  const put = (img, x, y, s, alpha) => {
+    g.globalAlpha = alpha;
+    g.drawImage(img, x + (w - w * s) / 2, y + (h - h * s) / 2, w * s, h * s);
+  };
+  if (tr === 'fade') { put(a, 0, 0, 1, 1); put(b, 0, 0, 1, e); }
+  else if (tr === 'slide') { put(a, -e * w, 0, 1, 1); put(b, (1 - e) * w, 0, 1, 1); }
+  else if (tr === 'zoom') { put(a, 0, 0, 1 + 0.35 * e, 1 - e); put(b, 0, 0, 0.8 + 0.2 * e, e); }
+  else if (tr === 'flash') {
+    put(p < 0.5 ? a : b, 0, 0, 1, 1);
+    g.globalAlpha = 1 - Math.abs(2 * p - 1);
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, w, h);
+  } else return null;
+  g.globalAlpha = 1;
+  return mix;
+}
+
 // Pages call this after changing state.images (or the switch setting).
 engine.setImages = (list) => {
   state.images = (list || []).map((src) => ({ src }));
@@ -433,7 +485,8 @@ function draw(now, dt) {
   c.fillRect(0, 0, W, H);
   if (!state.img) { drawIdle(); return; }
 
-  const img = state.img;
+  const mixed = state.images.length > 1 ? transitionSource() : null;
+  const img = mixed || state.img;
   const fx = state.fx;
   const k = state.intensity;
   const p = state.pulse;
@@ -498,7 +551,7 @@ function draw(now, dt) {
   c.fill();
   c.shadowBlur = 0;
   c.clip();
-  if (fx.rgb && p > 0.04) {
+  if (fx.rgb && p > 0.04 && !mixed) {
     if (!state.channels) { state.channels = makeChannels(img); chanCache.set(img, state.channels); }
     const off = ((4 + 18 * k) * p * U) / scale;
     c.globalCompositeOperation = 'lighter';

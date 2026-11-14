@@ -57,7 +57,9 @@ if (data.analysis) {
 }
 
 // One picture, or several that switch on the beat (all the same shape).
-state.switchEvery = data.settings.switchEvery || 'beat';
+state.switchEvery = data.settings.switchEvery || 'beat'; // links made before transitions keep switching every beat
+state.transition = data.settings.transition || 'cut';
+if (typeof data.settings.transitionLen === 'number') state.transitionLen = data.settings.transitionLen;
 (() => {
   const list = Array.isArray(data.images) && data.images.length > 1 ? data.images : [data.image];
   const loaded = new Array(list.length).fill(null);
