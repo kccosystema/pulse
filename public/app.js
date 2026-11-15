@@ -302,7 +302,7 @@ $('recordSignIn').addEventListener('click', () => { closeSheets(); startSignIn('
 
 // ───────────────────────── song details ─────────────────────────
 
-const details = { title: '', artist: '', album: '', website: '', links: {} };
+const details = { title: '', artist: '', album: '', website: '', links: {}, artistId: null };
 let detailsTouched = false; // once the user edits, don't overwrite with file tags
 
 function applyDetails() {
@@ -393,6 +393,7 @@ async function saveArtistProfile(profile) {
     });
     const r = await res.json().catch(() => ({}));
     if (!res.ok) { toast(r.error || 'Could not save the artist'); return; }
+    if (r.artist && details.artist.toLowerCase() === r.artist.name.toLowerCase()) details.artistId = r.artist.id;
     await loadArtists(true);
     toast(cur ? `Updated ${profile.name}` : `Saved ${profile.name} to your artists`);
   } catch { toast('Could not save the artist'); }
@@ -411,16 +412,59 @@ async function renderMyArtists() {
     const sm = document.createElement('small');
     sm.textContent = Object.keys(LINK_SERVICES).filter((k) => a.links && a.links[k]).map((k) => LINK_SERVICES[k].name).join(' · ') || a.website || 'No links yet';
     meta.append(b, sm);
+    if (a.public) { const on = document.createElement('span'); on.className = 'on-badge'; on.textContent = '● Page on · '; sm.prepend(on); }
+    const page = document.createElement('button'); page.type = 'button'; page.textContent = 'Page';
+    page.onclick = () => openArtistPage(a);
     const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Delete';
     del.onclick = async () => {
       if (!confirm(`Remove “${a.name}” from your saved artists? Songs already shared keep their details.`)) return;
       const res = await authFetch(`/api/artists?id=${encodeURIComponent(a.id)}`, { method: 'DELETE' }).catch(() => null);
       if (res && res.ok) renderMyArtists(); else toast('Could not delete');
     };
-    row.append(meta, del);
+    const acts = document.createElement('div'); acts.className = 'acts'; acts.append(page, del);
+    row.append(meta, acts);
     return row;
   }));
 }
+
+// ── optional public artist page ──
+let pageArtist = null;
+function showArtistLink(a) {
+  const on = !!(a && a.public && a.slug);
+  $('apLinkBox').hidden = !on;
+  if (on) { const u = `${location.origin}/a/${a.slug}`; $('apLink').value = u; $('apOpen').href = u; }
+}
+function openArtistPage(a) {
+  pageArtist = a;
+  $('apName').textContent = `· ${a.name}`;
+  $('apPublic').checked = !!a.public;
+  $('apBio').value = a.bio || '';
+  $('apError').hidden = true;
+  showArtistLink(a);
+  $('accountSheet').hidden = true;
+  $('artistSheet').hidden = false;
+}
+$('artistForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!pageArtist) return;
+  $('apSave').disabled = true; $('apError').hidden = true;
+  try {
+    const a = pageArtist;
+    const res = await authFetch(`/api/artists?id=${encodeURIComponent(a.id)}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: a.name, website: a.website, links: a.links, bio: $('apBio').value, public: $('apPublic').checked }),
+    });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(r.error || 'Could not save');
+    pageArtist = r.artist;
+    showArtistLink(r.artist);
+    toast(r.artist.public ? 'Artist page is live' : 'Artist page is off');
+    renderMyArtists();
+  } catch (err) { $('apError').textContent = err.message; $('apError').hidden = false; }
+  finally { $('apSave').disabled = false; }
+});
+$('apCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('apLink').value); toast('Link copied'); } catch { toast($('apLink').value); } });
+$('artistSheet').addEventListener('click', (e) => { if (e.target === $('artistSheet') || e.target.closest('#artistSheet [data-close]')) $('artistSheet').hidden = true; });
 
 function openDetails(note) {
   for (const k of ['title', 'artist', 'album', 'website']) $('d_' + k).value = details[k] || '';
@@ -457,6 +501,8 @@ $('detailsForm').addEventListener('submit', (e) => {
     if (v) links[k] = v;
   }
   details.links = links;
+  const picked = pickedArtist();
+  details.artistId = picked && picked.name.toLowerCase() === details.artist.toLowerCase() ? picked.id : null;
   if (account.user && savedArtists && !$('d_saveWrap').hidden && $('d_save').checked && details.artist) {
     saveArtistProfile({ name: details.artist, website: details.website, links });
   }
@@ -656,7 +702,7 @@ async function createShare(progress) {
   const r = state.rawAnalysis;
   const manifest = {
     v: 1,
-    title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {},
+    title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {}, artistId: details.artistId || null,
     image: { url: img.url, width: cover.width, height: cover.height },
     images: pics.length > 1 || pics.some((x) => x.kind === 'video') ? pics : undefined,
     audio: { url: up.url, type: song.type, duration: isFinite(audio.duration) ? audio.duration : null, delay: song.delay },
@@ -935,7 +981,7 @@ async function startEdit(id) {
       hits: a.hits.map(([t, z]) => ({ t, z })),
     } : null;
 
-    Object.assign(details, { title: m.title, artist: m.artist, album: m.album || '', website: m.website || '', links: m.links || {} });
+    Object.assign(details, { title: m.title, artist: m.artist, album: m.album || '', website: m.website || '', links: m.links || {}, artistId: m.artistId || null });
     detailsTouched = true;
     applyDetails();
     const st = m.settings || {};
@@ -1013,7 +1059,7 @@ $('saveForm').addEventListener('submit', async (e) => {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {},
+        title: details.title, artist: details.artist, album: details.album, website: details.website, links: details.links || {}, artistId: details.artistId || null,
         settings: { fx: state.fx, intensity: state.intensity, sensitivity: state.sensitivity, mode: state.mode, switchEvery: state.switchEvery, transition: state.transition, transitionLen: state.transitionLen },
         featured: $('e_feature').checked,
         image,

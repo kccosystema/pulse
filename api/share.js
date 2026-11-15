@@ -106,6 +106,7 @@ export async function POST(request) {
     claimHash: claimToken ? hashToken(claimToken) : null,
     title,
     artist,
+    artistId: /^\d{1,18}$/.test(String(m.artistId || '')) ? String(m.artistId) : null,
     album: str(m.album, 120),
     website: website(m.website),
     links: cleanLinks(m.links),
@@ -183,6 +184,7 @@ export async function PATCH(request) {
   }
   m.title = title;
   m.artist = artist;
+  if (b.artistId !== undefined) m.artistId = /^\d{1,18}$/.test(String(b.artistId || '')) ? String(b.artistId) : null;
   m.album = str(b.album, 120);
   m.website = website(b.website);
   if (b.links !== undefined) m.links = cleanLinks(b.links);

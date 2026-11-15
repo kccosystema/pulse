@@ -119,3 +119,7 @@ Pick up to 10 pictures. Later ones are cropped to the first picture's shape so t
 ## Short video clips in the mix
 
 The picture list can include short clips (MP4 / MOV / WebM). They play muted for their turn, restart when their turn starts and loop if the turn is longer; effects and transitions work on them too. Clips are cropped to the first item's shape and limited to their first 15 seconds. When sharing, each clip is converted on the phone (Mediabunny: cropped, max 720 px, H.264, no sound) and uploaded to `media/video/` (25 MB cap); if a browser can't convert, the original file is uploaded with its crop stored. The manifest stores clips as `images[]` items with `kind: 'video'`, `duration` and `crop`; `image` is always a still (the first frame when a clip comes first) for link previews. Fast video export seeks each visible clip to the exact frame (`engine.prepareFrame`).
+
+## Optional artist pages
+
+Each saved artist can have a public page at `/a/<slug>` (off by default; switch it on in the account sheet → My artists → Page, with an optional bio). It lists that user's songs for the artist (songs saved with the artist picked, `artistId`, or older songs with the same artist name), with jam counts, streaming links, website and MusicGroup structured data. The slug is made from the name, kept when the page is switched off and on, and made unique across users (`-2`, `-3`…). Share pages link the artist name to the page only while it's on. Rendered by `api/artist-page.js` (`lib/artist-template.js`, `public/artist.css`).

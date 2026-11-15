@@ -397,6 +397,21 @@
   </div>
 </div>
 
+<div class="sheet" id="artistSheet" hidden>
+  <form class="panel sheet-card" id="artistForm" novalidate>
+    <h2>Artist page <span class="opt" id="apName"></span></h2>
+    <p class="note">An optional public page that lists every song you share as this artist, with your bio, website and streaming links.</p>
+    <label class="check"><input type="checkbox" id="apPublic"> Show a public artist page</label>
+    <label class="field">Bio <span class="opt">optional</span><textarea id="apBio" maxlength="600" rows="3" placeholder="A line or two about the artist"></textarea></label>
+    <div id="apLinkBox" hidden>
+      <input id="apLink" class="link" readonly aria-label="Artist page link" onclick="this.select()">
+      <div class="row"><button type="button" id="apCopy">Copy</button><a class="btn" id="apOpen" target="_blank" rel="noopener">Open</a></div>
+    </div>
+    <p class="error" id="apError" role="alert" hidden></p>
+    <div class="row"><button type="button" data-close>Close</button><button type="submit" class="primary" id="apSave">Save</button></div>
+  </form>
+</div>
+
 <div class="sheet" id="accountSheet" hidden>
   <div class="panel sheet-card">
     <div class="acct-head">

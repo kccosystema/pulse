@@ -75,6 +75,9 @@ http.createServer(async (req, res) => {
     } else if (/^\/s\/[A-Za-z0-9]+$/.test(p)) {
       url.searchParams.set('id', p.slice(3));
       await callApi('view', req, res, new URL(`/api/view?${url.searchParams}`, url));
+    } else if (/^\/a\/[a-z0-9-]+$/i.test(p)) {
+      url.searchParams.set('slug', p.slice(3));
+      await callApi('artist-page', req, res, new URL(`/api/artist-page?${url.searchParams}`, url));
     } else if (p.startsWith('/m/')) {
       await sendFile(req, res, path.join(DATA, path.normalize(p.slice(3)).replace(/^(\.\.[/\\])+/, '')));
     } else {

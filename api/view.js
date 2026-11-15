@@ -4,6 +4,7 @@
 import { getJSON, storageMode, blobAuth } from '../lib/storage.js';
 import { renderView, renderNotFound } from '../lib/view-template.js';
 import { isExpired } from '../lib/shares.js';
+import { publicArtistFor } from '../lib/artists.js';
 
 const html = (body, status, cache) =>
   new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': cache } });
@@ -21,8 +22,11 @@ export async function GET(request) {
   }
   if (!manifest) return html(renderNotFound(), 404, 'public, max-age=0, s-maxage=30');
   if (isExpired(manifest)) return html(renderNotFound('This link has expired. Guest links last 30 days.'), 410, 'public, max-age=0, s-maxage=300');
+  // Artist page link (only when its owner switched the page on).
+  const page = await publicArtistFor(manifest.owner, manifest.artistId, manifest.artist).catch(() => null);
   // Never expose ownership or claim data to the page.
   const { owner, claimHash, ...publicManifest } = manifest;
+  if (page) publicManifest.artistPage = `/a/${page.slug}`;
   manifest = publicManifest;
   const origin = `${url.protocol}//${request.headers.get('x-forwarded-host') || url.host}`;
   return html(renderView(manifest, origin), 200, 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');

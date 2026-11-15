@@ -29,6 +29,10 @@
     {
       "source": "/terms",
       "destination": "/terms/index.html"
+    },
+    {
+      "source": "/a/:slug",
+      "destination": "/api/artist-page?slug=:slug"
     }
   ],
   "headers": [

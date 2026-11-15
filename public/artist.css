@@ -1,0 +1,30 @@
+/* Public artist page */
+:root { --bg: #0b0b10; --text: #f4f4f7; --muted: #a3a3b2; --accent: #ff3d7f; --accent-2: #7c5cff; --line: rgba(255,255,255,.14); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100dvh; }
+.bg { position: fixed; inset: -40px; z-index: -1; background: center / cover no-repeat; filter: blur(40px) saturate(150%) brightness(.45); }
+.bg:not([style]) { background: radial-gradient(60% 40% at 50% 0%, rgba(255,61,127,.25), transparent 70%); filter: none; }
+.wrap { max-width: 720px; margin: 0 auto; padding: calc(28px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); }
+.head { text-align: center; padding: 20px 18px; border-radius: 24px; margin-bottom: 22px;
+  background: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.04)), rgba(18,16,28,.35);
+  border: 1px solid rgba(255,255,255,.2); backdrop-filter: blur(22px) saturate(160%); -webkit-backdrop-filter: blur(22px) saturate(160%); }
+.avatar { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 12px;
+  border: 3px solid rgba(255,255,255,.75); box-shadow: 0 10px 30px rgba(255,61,127,.35); }
+.avatar.ph { display: grid; place-items: center; font-size: 44px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+h1 { margin: 0; font-size: clamp(28px, 8vw, 40px); line-height: 1.1; letter-spacing: -0.02em; }
+.stats { margin: 6px 0 0; color: rgba(255,255,255,.75); font-size: 14px; }
+.bio { margin: 12px auto 0; max-width: 520px; white-space: pre-wrap; color: #e6e6ee; font-size: 15px; }
+.links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.svc { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #fff;
+  text-decoration: none; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); }
+.svc::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dot, #fff); }
+.svc-spotify { --dot: #1ed760; } .svc-apple { --dot: #fa2d48; } .svc-youtube { --dot: #ff0033; } .svc-soundcloud { --dot: #ff7700; } .svc-site { --dot: #b49cff; }
+h2 { font-size: 18px; margin: 0 4px 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.song { display: block; padding: 8px; border-radius: 16px; color: var(--text); text-decoration: none; background: rgba(18,16,28,.55); border: 1px solid var(--line); }
+.song img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 10px; display: block; background: #000; }
+.song b { display: block; margin-top: 8px; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song small { color: var(--muted); font-size: 12.5px; }
+.empty { color: var(--muted); text-align: center; }
+.foot { margin-top: 28px; text-align: center; color: rgba(255,255,255,.7); font-size: 13px; }
+.foot a { color: #fff; }

@@ -134,3 +134,5 @@ body.view #setup .btn { margin-top: 8px; width: 100%; }
   border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; resize: vertical; }
 .report-card .r-terms { margin: 10px 0 0; text-align: center; }
 .report-card .r-terms a { color: #ff9cc0; }
+
+.artist-link { color: inherit; text-decoration: underline; text-decoration-color: rgba(255,255,255,.4); text-underline-offset: 3px; }
