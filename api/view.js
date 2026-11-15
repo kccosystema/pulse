@@ -28,6 +28,9 @@ export async function GET(request) {
   const { owner, claimHash, ...publicManifest } = manifest;
   if (page) publicManifest.artistPage = `/a/${page.slug}`;
   manifest = publicManifest;
+  if (url.searchParams.get('format') === 'json') {
+    return new Response(JSON.stringify(manifest), { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=300' } });
+  }
   const origin = `${url.protocol}//${request.headers.get('x-forwarded-host') || url.host}`;
   return html(renderView(manifest, origin), 200, 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
 }

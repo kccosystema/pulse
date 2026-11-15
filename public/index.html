@@ -402,6 +402,14 @@
     <h2>Artist page <span class="opt" id="apName"></span></h2>
     <p class="note">An optional public page that lists every song you share as this artist, with your bio, website and streaming links.</p>
     <label class="check"><input type="checkbox" id="apPublic"> Show a public artist page</label>
+    <div class="field">Header picture <span class="opt">optional · the big picture at the top of the page</span>
+      <div class="ap-header">
+        <span class="ap-prev" id="apHeaderPrev" aria-hidden="true"></span>
+        <button type="button" id="apHeaderPick">Choose</button>
+        <button type="button" id="apHeaderRemove" hidden>Remove</button>
+        <input type="file" accept="image/*" id="apHeaderInput" hidden>
+      </div>
+    </div>
     <label class="field">Bio <span class="opt">optional</span><textarea id="apBio" maxlength="600" rows="3" placeholder="A line or two about the artist"></textarea></label>
     <div id="apLinkBox" hidden>
       <input id="apLink" class="link" readonly aria-label="Artist page link" onclick="this.select()">

@@ -6,6 +6,7 @@
 import { getUser } from '../lib/auth.js';
 import { artistsEnabled, listArtists, createArtist, updateArtist, deleteArtist, cleanArtist } from '../lib/artists.js';
 import { json } from '../lib/http.js';
+import { blobAuth } from '../lib/storage.js';
 
 async function who(request) {
   if (!artistsEnabled()) return json({ error: 'Saved artists aren’t available right now' }, 503);
@@ -44,7 +45,7 @@ export async function PATCH(request) {
   if (!id) return json({ error: 'Bad request' }, 400);
   const a = cleanArtist(await body(request));
   if (a.error) return json({ error: a.error }, 400);
-  const artist = await updateArtist(u.userId, id, a);
+  const artist = await updateArtist(u.userId, id, a, blobAuth(request));
   return artist ? json({ artist }) : json({ error: 'Not found' }, 404);
 }
 
@@ -53,6 +54,6 @@ export async function DELETE(request) {
   if (u instanceof Response) return u;
   const id = idOf(request);
   if (!id) return json({ error: 'Bad request' }, 400);
-  await deleteArtist(u.userId, id);
+  await deleteArtist(u.userId, id, blobAuth(request));
   return json({ deleted: true });
 }

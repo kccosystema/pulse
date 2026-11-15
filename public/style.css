@@ -324,3 +324,7 @@ html.desktop .sheet { display: none !important; }
 #apLinkBox { margin: 4px 0 8px; }
 .artist-row .acts { display: flex; gap: 6px; }
 .artist-row .on-badge { color: #7ef0a9; font-weight: 600; }
+
+.ap-header { display: flex; align-items: center; gap: 8px; }
+.ap-prev { width: 96px; height: 54px; border-radius: 8px; flex: none; background: rgba(255,255,255,.06) center / cover no-repeat; border: 1px solid var(--line); }
+.ap-header button { padding: 8px 14px; font-size: 14px; }

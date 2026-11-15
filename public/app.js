@@ -434,8 +434,30 @@ function showArtistLink(a) {
   $('apLinkBox').hidden = !on;
   if (on) { const u = `${location.origin}/a/${a.slug}`; $('apLink').value = u; $('apOpen').href = u; }
 }
+let headerPending = null; // { blob, url } chosen but not uploaded yet; '' = remove
+function showHeader(url) {
+  $('apHeaderPrev').style.backgroundImage = url ? `url("${url}")` : '';
+  $('apHeaderRemove').hidden = !url;
+  $('apHeaderPick').textContent = url ? 'Change' : 'Choose';
+}
+$('apHeaderPick').addEventListener('click', () => $('apHeaderInput').click());
+$('apHeaderInput').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  try {
+    const img = await loadImg(url);
+    const c = await coverJpeg(img); // max 1600 px JPEG
+    headerPending = { blob: c.blob, url };
+    showHeader(url);
+  } catch { toast('Could not open that picture'); }
+});
+$('apHeaderRemove').addEventListener('click', () => { headerPending = ''; showHeader(''); });
+
 function openArtistPage(a) {
   pageArtist = a;
+  headerPending = null;
+  showHeader(a.header || '');
   $('apName').textContent = `· ${a.name}`;
   $('apPublic').checked = !!a.public;
   $('apBio').value = a.bio || '';
@@ -450,13 +472,23 @@ $('artistForm').addEventListener('submit', async (e) => {
   $('apSave').disabled = true; $('apError').hidden = true;
   try {
     const a = pageArtist;
+    let header;
+    if (headerPending === '') header = '';
+    else if (headerPending && headerPending.blob) {
+      const cfg = await fetch('/api/config').then((r) => r.json()).catch(() => ({}));
+      if (cfg.storage !== 'blob' && cfg.storage !== 'local') throw new Error('Uploads aren’t set up yet');
+      $('apSave').textContent = 'Uploading…';
+      header = (await uploadFile(cfg, 'img', headerPending.blob, 'artist-header.jpg', 'image/jpeg', () => {})).url;
+    }
     const res = await authFetch(`/api/artists?id=${encodeURIComponent(a.id)}`, {
       method: 'PATCH', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: a.name, website: a.website, links: a.links, bio: $('apBio').value, public: $('apPublic').checked }),
+      body: JSON.stringify({ name: a.name, website: a.website, links: a.links, bio: $('apBio').value, public: $('apPublic').checked, ...(header !== undefined ? { header } : {}) }),
     });
     const r = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(r.error || 'Could not save');
     pageArtist = r.artist;
+    headerPending = null;
+    showHeader(r.artist.header || '');
     showArtistLink(r.artist);
     toast(r.artist.public ? 'Artist page is live' : 'Artist page is off');
     renderMyArtists();
