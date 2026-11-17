@@ -328,3 +328,43 @@ html.desktop .sheet { display: none !important; }
 .ap-header { display: flex; align-items: center; gap: 8px; }
 .ap-prev { width: 96px; height: 54px; border-radius: 8px; flex: none; background: rgba(255,255,255,.06) center / cover no-repeat; border: 1px solid var(--line); }
 .ap-header button { padding: 8px 14px; font-size: 14px; }
+
+/* Account menu */
+.acct-menu { margin: 4px 0 10px; }
+.acct-menu button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 14px; text-align: left; font-weight: 600; }
+.acct-menu button span { flex: 1; }
+.acct-menu button small { color: var(--muted); font-weight: 500; }
+.acct-menu button b { font-size: 20px; color: var(--muted); }
+
+/* My artists screen (full screen, above the app, below sheets) */
+.mpage { position: fixed; inset: 0; z-index: 15; background: var(--bg); overflow-y: auto; overscroll-behavior: contain; }
+.mpage[hidden] { display: none; }
+body.mpage-open { overflow: hidden; }
+.mp-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px; background: rgba(11,11,16,.9); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.mp-head h2 { flex: 1; margin: 0; font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-back { width: 40px; height: 40px; padding: 0; border-radius: 50%; font-size: 26px; line-height: 1; flex: none; }
+.mp-add { padding: 8px 14px; font-size: 14px; flex: none; }
+.mp-body { max-width: 640px; margin: 0 auto; padding: 14px 14px calc(30px + env(safe-area-inset-bottom)); }
+.mp-list { display: grid; gap: 10px; }
+.mp-card { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 12px; width: 100%; padding: 10px; border-radius: 16px; text-align: left; }
+.mp-card .av { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)) center / cover no-repeat;
+  display: grid; place-items: center; font-size: 26px; font-weight: 800; }
+.mp-card b { display: block; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-card small { color: var(--muted); font-size: 13px; }
+.mp-card .chev { font-size: 22px; color: var(--muted); }
+.mp-card .on { color: #7ef0a9; }
+.mp-empty { color: var(--muted); text-align: center; padding: 30px 10px; }
+.mp-hero { position: relative; height: 190px; border-radius: 18px; overflow: hidden; margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)) center / cover no-repeat; }
+.mp-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, rgba(11,11,16,.85)); }
+.mp-hero-text { position: absolute; z-index: 1; left: 14px; right: 14px; bottom: 10px; }
+.mp-hero h3 { margin: 0; font-size: 28px; line-height: 1.05; letter-spacing: -0.02em; }
+.mp-hero small { color: rgba(255,255,255,.8); }
+.mp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mp-actions > * { flex: 1 1 30%; text-align: center; font-size: 14px; padding: 9px 6px; white-space: nowrap; }
+.mp-links { margin: 10px 2px 0; }
+.mp-songs-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 8px; }
+.mp-songs-head h3 { margin: 0; }
+.mp-songs-head button { padding: 8px 14px; font-size: 14px; }
+#artistEditSheet .wide { margin-top: 10px; }

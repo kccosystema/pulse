@@ -420,16 +420,57 @@
   </form>
 </div>
 
+<section id="artistsPage" class="mpage" hidden aria-labelledby="mpTitle">
+  <header class="mp-head">
+    <button type="button" class="mp-back" id="mpBack" aria-label="Back">‹</button>
+    <h2 id="mpTitle">My artists</h2>
+    <button type="button" class="accent mp-add" id="mpAdd">+ New</button>
+  </header>
+  <div class="mp-body">
+    <div id="mpList" class="mp-list"></div>
+    <div id="mpDetail" hidden>
+      <div class="mp-hero" id="mpHero">
+        <div class="mp-hero-text"><h3 id="mpName"></h3><small id="mpStats"></small></div>
+      </div>
+      <div class="mp-actions">
+        <button type="button" id="mpEdit">✏️ Edit details</button>
+        <button type="button" id="mpPage">🌐 Artist page</button>
+        <a class="btn" id="mpView" target="_blank" rel="noopener" hidden>View page ↗</a>
+      </div>
+      <p class="note mp-links" id="mpLinks"></p>
+      <div class="mp-songs-head"><h3>Songs</h3><button type="button" class="accent" id="mpNewSong">+ New song</button></div>
+      <div id="mpSongs" class="my-links"></div>
+    </div>
+  </div>
+</section>
+
+<div class="sheet" id="artistEditSheet" hidden>
+  <form class="panel sheet-card" id="artistEditForm" novalidate>
+    <h2 id="aeTitle">Edit artist</h2>
+    <label class="field">Artist name <input id="aeName" maxlength="120" autocomplete="off" required></label>
+    <label class="field">Website <span class="opt">optional</span><input id="aeWebsite" inputmode="url" maxlength="300" placeholder="example.com" autocomplete="off"></label>
+    <label class="field">Spotify <span class="opt">optional</span><input id="aeSpotify" inputmode="url" maxlength="400" placeholder="open.spotify.com/…" autocomplete="off"></label>
+    <label class="field">Apple Music <span class="opt">optional</span><input id="aeApple" inputmode="url" maxlength="400" placeholder="music.apple.com/…" autocomplete="off"></label>
+    <label class="field">YouTube <span class="opt">optional</span><input id="aeYoutube" inputmode="url" maxlength="400" placeholder="youtube.com/…" autocomplete="off"></label>
+    <label class="field">SoundCloud <span class="opt">optional</span><input id="aeSoundcloud" inputmode="url" maxlength="400" placeholder="soundcloud.com/…" autocomplete="off"></label>
+    <p class="note" id="aeNote">Changes show on your artist page right away. Songs you already shared keep the details they were shared with; edit a song to update it.</p>
+    <p class="error" id="aeError" role="alert" hidden></p>
+    <div class="row"><button type="button" data-close>Cancel</button><button type="submit" class="primary" id="aeSave">Save</button></div>
+    <button type="button" class="danger wide" id="aeDelete">Delete artist</button>
+  </form>
+</div>
+
 <div class="sheet" id="accountSheet" hidden>
   <div class="panel sheet-card">
     <div class="acct-head">
       <span class="acct-avatar" id="acctAvatar"></span>
       <div><b id="acctName"></b><br><small id="acctEmail"></small></div>
     </div>
+    <nav class="acct-menu" aria-label="Your account">
+      <button type="button" id="menuArtists"><span>🎤 My artists</span><small id="menuArtistsCount"></small><b aria-hidden="true">›</b></button>
+    </nav>
     <h3>My links</h3>
     <div id="myLinks" class="my-links"></div>
-    <h3 id="myArtistsTitle" hidden>My artists</h3>
-    <div id="myArtists" class="my-links" hidden></div>
     <a class="btn wide" id="adminLink" href="/admin" hidden>Admin dashboard</a>
     <div class="row">
       <button type="button" id="signOutBtn">Sign out</button>

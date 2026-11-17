@@ -399,32 +399,187 @@ async function saveArtistProfile(profile) {
   } catch { toast('Could not save the artist'); }
 }
 
-// Account sheet: saved artists with Delete.
-async function renderMyArtists() {
-  const box = $('myArtists'), title = $('myArtistsTitle');
-  await loadArtists(true);
+// ───────────────────────── My artists screen ─────────────────────────
+// Account menu → My artists: every saved artist, then one artist's songs
+// with Edit / Copy / Open / Delete, artist details, and their public page.
+// Uses #artists and #artists/<id> so the phone's back button works.
+let mpLinks = null, mpPlays = {};
+const mpSongsOf = (a) => (mpLinks || []).filter((l) => (l.artistId ? l.artistId === a.id : (l.artist || '').toLowerCase() === a.name.toLowerCase()));
+const artistPic = (a) => a.header || (mpSongsOf(a)[0] || {}).image || '';
+async function mpLoad(force) {
+  const jobs = [loadArtists(force)];
+  if (force || !mpLinks) {
+    jobs.push(authFetch('/api/links').then((r) => (r.ok ? r.json() : { links: [] })).then((r) => {
+      mpLinks = r.links || [];
+      if (!mpLinks.length) return;
+      return fetch(`/api/plays?ids=${mpLinks.map((l) => l.id).join(',')}`, { cache: 'no-store' }).then((x) => x.json())
+        .then((x) => { mpPlays = x.enabled ? x.plays : {}; }).catch(() => {});
+    }).catch(() => { mpLinks = []; }));
+  }
+  await Promise.all(jobs);
+}
+const jamsOf = (songs) => songs.reduce((n, l) => n + (mpPlays[l.id] || 0), 0);
+
+function mpRoute() {
+  const m = /^#artists(?:\/(\d+))?$/.exec(location.hash);
+  const open = !!m && !!account.user;
+  $('artistsPage').hidden = !open;
+  document.body.classList.toggle('mpage-open', open);
+  if (!open) return;
+  if (m[1]) mpShowArtist(m[1]); else mpShowList();
+}
+window.addEventListener('hashchange', mpRoute);
+account.onChange(() => mpRoute());
+function mpOpen(id) {
+  const h = id ? `#artists/${id}` : '#artists';
+  if (location.hash !== h) location.hash = h; else mpRoute();
+}
+function mpClose() {
+  if (/^#artists/.test(location.hash)) history.pushState('', document.title, location.pathname + location.search);
+  mpRoute();
+}
+$('menuArtists').addEventListener('click', () => { $('accountSheet').hidden = true; mpOpen(); });
+$('mpBack').addEventListener('click', () => (/^#artists\/\d+$/.test(location.hash) ? mpOpen() : mpClose()));
+
+async function mpShowList() {
+  $('mpTitle').textContent = 'My artists';
+  $('mpAdd').hidden = false;
+  $('mpDetail').hidden = true;
+  const box = $('mpList');
+  box.hidden = false;
+  if (!savedArtists) box.innerHTML = '<p class="mp-empty">Loading…</p>';
+  await mpLoad(true);
+  if (!/^#artists$/.test(location.hash)) return;
   const list = savedArtists || [];
-  title.hidden = box.hidden = !list.length;
+  if (!list.length) {
+    box.innerHTML = '<p class="mp-empty">No artists yet. Tap <b>+ New</b>, or save one from Song details when you make a song.</p>';
+    return;
+  }
   box.replaceChildren(...list.map((a) => {
-    const row = document.createElement('div'); row.className = 'artist-row';
-    const meta = document.createElement('div'); meta.className = 'link-meta';
-    const b = document.createElement('b'); b.textContent = a.name;
+    const songs = mpSongsOf(a), jams = jamsOf(songs), pic = artistPic(a);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'mp-card';
+    const av = document.createElement('span'); av.className = 'av';
+    if (pic) av.style.backgroundImage = `url("${pic}")`; else av.textContent = a.name.trim().charAt(0).toUpperCase();
+    const mid = document.createElement('span');
+    const nm = document.createElement('b'); nm.textContent = a.name;
     const sm = document.createElement('small');
-    sm.textContent = Object.keys(LINK_SERVICES).filter((k) => a.links && a.links[k]).map((k) => LINK_SERVICES[k].name).join(' · ') || a.website || 'No links yet';
-    meta.append(b, sm);
-    if (a.public) { const on = document.createElement('span'); on.className = 'on-badge'; on.textContent = '● Page on · '; sm.prepend(on); }
-    const page = document.createElement('button'); page.type = 'button'; page.textContent = 'Page';
-    page.onclick = () => openArtistPage(a);
-    const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Delete';
-    del.onclick = async () => {
-      if (!confirm(`Remove “${a.name}” from your saved artists? Songs already shared keep their details.`)) return;
-      const res = await authFetch(`/api/artists?id=${encodeURIComponent(a.id)}`, { method: 'DELETE' }).catch(() => null);
-      if (res && res.ok) renderMyArtists(); else toast('Could not delete');
-    };
-    const acts = document.createElement('div'); acts.className = 'acts'; acts.append(page, del);
-    row.append(meta, acts);
+    sm.textContent = `${songs.length} song${songs.length === 1 ? '' : 's'}${jams ? ` · 🔥 ${jams.toLocaleString()}` : ''}`;
+    if (a.public) { const on = document.createElement('span'); on.className = 'on'; on.textContent = ' · ● Page on'; sm.append(on); }
+    mid.append(nm, sm);
+    const ch = document.createElement('span'); ch.className = 'chev'; ch.textContent = '›';
+    b.append(av, mid, ch);
+    b.onclick = () => mpOpen(a.id);
+    return b;
+  }));
+}
+
+let mpCurrent = null;
+async function mpShowArtist(id) {
+  $('mpList').hidden = true;
+  $('mpAdd').hidden = true;
+  if (!savedArtists || !mpLinks) await mpLoad(false);
+  const a = (savedArtists || []).find((x) => x.id === id);
+  if (!a) { mpOpen(); return; }
+  mpCurrent = a;
+  $('mpDetail').hidden = false;
+  $('mpTitle').textContent = a.name;
+  const songs = mpSongsOf(a), jams = jamsOf(songs), pic = artistPic(a);
+  $('mpHero').style.backgroundImage = pic ? `url("${pic}")` : '';
+  $('mpName').textContent = a.name;
+  $('mpStats').textContent = `${songs.length} song${songs.length === 1 ? '' : 's'}${jams ? ` · 🔥 ${jams.toLocaleString()} jams` : ''} · ${a.public ? 'Artist page on' : 'Artist page off'}`;
+  $('mpView').hidden = !(a.public && a.slug);
+  if (a.slug) $('mpView').href = `/a/${a.slug}`;
+  const linkNames = Object.keys(LINK_SERVICES).filter((k) => a.links && a.links[k]).map((k) => LINK_SERVICES[k].name);
+  $('mpLinks').textContent = [a.website && a.website.replace(/^https?:\/\//, '').replace(/\/$/, ''), linkNames.length && `Listen on: ${linkNames.join(', ')}`].filter(Boolean).join(' · ') || 'No website or streaming links yet. Tap Edit details to add them.';
+  const box = $('mpSongs');
+  if (!songs.length) { box.innerHTML = '<p class="mp-empty">No songs for this artist yet.</p>'; return; }
+  box.replaceChildren(...songs.map((l) => {
+    const row = linkRow(l);
+    const n = mpPlays[l.id] || 0;
+    const j = row.querySelector('[data-jams]');
+    if (j) j.textContent = ` · 🔥 ${n.toLocaleString()} ${n === 1 ? 'jam' : 'jams'}`;
+    const edit = row.querySelector('.link-actions button.accent');
+    if (edit) edit.onclick = () => { mpClose(); startEdit(l.id); };
     return row;
   }));
+}
+
+$('mpEdit').addEventListener('click', () => mpCurrent && openArtistEdit(mpCurrent));
+$('mpPage').addEventListener('click', () => mpCurrent && openArtistPage(mpCurrent));
+$('mpAdd').addEventListener('click', () => openArtistEdit(null));
+// Start a new song with this artist already filled in.
+$('mpNewSong').addEventListener('click', () => {
+  const a = mpCurrent;
+  if (!a) return;
+  Object.assign(details, { artist: a.name, website: a.website || '', links: { ...(a.links || {}) }, artistId: a.id });
+  detailsTouched = true;
+  applyDetails();
+  mpClose();
+  goHome();
+  toast(`New song for ${a.name}: pick your pictures and song`);
+});
+
+// Add / edit an artist's details.
+let aeArtist = null;
+const AE = { spotify: 'aeSpotify', apple: 'aeApple', youtube: 'aeYoutube', soundcloud: 'aeSoundcloud' };
+function openArtistEdit(a) {
+  aeArtist = a;
+  $('aeTitle').textContent = a ? 'Edit artist' : 'New artist';
+  $('aeName').value = a ? a.name : '';
+  $('aeWebsite').value = a ? (a.website || '') : '';
+  for (const [k, el] of Object.entries(AE)) $(el).value = a && a.links ? (a.links[k] || '') : '';
+  $('aeDelete').hidden = !a;
+  $('aeNote').hidden = !a;
+  $('aeError').hidden = true;
+  $('artistEditSheet').hidden = false;
+  setTimeout(() => $('aeName').focus(), 50);
+}
+$('artistEditForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const showErr = (m) => { $('aeError').textContent = m; $('aeError').hidden = false; };
+  const name = $('aeName').value.trim();
+  if (!name) { showErr('Add the artist name'); return; }
+  const web = $('aeWebsite').value.trim(), website = normalizeUrl(web);
+  if (web && !website) { showErr('That website doesn’t look right'); return; }
+  const links = {};
+  for (const [k, el] of Object.entries(AE)) {
+    const v = cleanStreamLink(k, $(el).value);
+    if (v === null) { showErr(`That doesn’t look like a ${LINK_SERVICES[k].name} link`); return; }
+    if (v) links[k] = v;
+  }
+  $('aeSave').disabled = true;
+  try {
+    const a = aeArtist;
+    const res = await authFetch(a ? `/api/artists?id=${encodeURIComponent(a.id)}` : '/api/artists', {
+      method: a ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, website, links }),
+    });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(r.error || 'Could not save');
+    $('artistEditSheet').hidden = true;
+    toast(a ? `Saved ${name}` : `Added ${name}`);
+    await loadArtists(true);
+    if (a) mpRoute(); else mpOpen(r.artist.id);
+  } catch (err) { showErr(err.message); }
+  finally { $('aeSave').disabled = false; }
+});
+$('aeDelete').addEventListener('click', async () => {
+  const a = aeArtist;
+  if (!a || !confirm(`Delete “${a.name}”? Their artist page is removed. Songs you already shared stay as they are.`)) return;
+  const res = await authFetch(`/api/artists?id=${encodeURIComponent(a.id)}`, { method: 'DELETE' }).catch(() => null);
+  if (!res || !res.ok) { toast('Could not delete'); return; }
+  $('artistEditSheet').hidden = true;
+  toast(`Deleted ${a.name}`);
+  await loadArtists(true);
+  mpOpen();
+});
+$('artistEditSheet').addEventListener('click', (e) => { if (e.target === $('artistEditSheet')) $('artistEditSheet').hidden = true; });
+
+// Count in the account menu.
+async function renderMyArtists() {
+  await loadArtists(true);
+  const n = (savedArtists || []).length;
+  $('menuArtistsCount').textContent = n ? String(n) : '';
 }
 
 // ── optional public artist page ──
@@ -491,7 +646,8 @@ $('artistForm').addEventListener('submit', async (e) => {
     showHeader(r.artist.header || '');
     showArtistLink(r.artist);
     toast(r.artist.public ? 'Artist page is live' : 'Artist page is off');
-    renderMyArtists();
+    await loadArtists(true);
+    mpRoute();
   } catch (err) { $('apError').textContent = err.message; $('apError').hidden = false; }
   finally { $('apSave').disabled = false; }
 });
