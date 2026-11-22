@@ -28,7 +28,7 @@ Pick an image and a song, then tap **Start**. Your files stay on the device.
 | `public/beat-worker.js` | Song analysis: tempo, beats, downbeats, kicks, hits |
 | `public/view.js`, `public/view.css` | Share page player |
 | `public/encode-worker.js` | Converts big or lossless songs to MP3 before sharing (LAME via WebAssembly) |
-| `public/sw.js` | Offline cache. **Bump `VERSION` whenever you change a file in `public/`.** |
+| `public/sw.js` | Offline cache. **Bump `VERSION` whenever you change a file in `public/`, and the `?v=` on the app's CSS/JS in `index.html`** (so phones never mix an old stylesheet with new code). |
 | `public/vendor/` | Bundled Vercel Blob upload client, MP3 encoder, Mediabunny and its AAC encoder (`npm run vendor` regenerates them) |
 | `api/upload.js` | Grants the browser permission to upload the cover and song straight to Vercel Blob |
 | `api/share.js` | Checks and saves a share (details, effect settings, beat map) |
