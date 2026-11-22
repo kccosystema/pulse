@@ -338,7 +338,7 @@ html.desktop .sheet { display: none !important; }
 
 /* My artists screen (full screen, above the app, below sheets) */
 .mpage { position: fixed; inset: 0; z-index: 15; background: var(--bg); overflow-y: auto; overscroll-behavior: contain; }
-.mpage[hidden] { display: none; }
+.mpage[hidden], .mpage [hidden] { display: none !important; }
 body.mpage-open { overflow: hidden; }
 .mp-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px;
   padding: calc(10px + env(safe-area-inset-top)) 12px 10px; background: rgba(11,11,16,.9); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }

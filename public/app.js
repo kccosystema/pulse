@@ -488,8 +488,9 @@ async function mpShowArtist(id) {
   $('mpHero').style.backgroundImage = pic ? `url("${pic}")` : '';
   $('mpName').textContent = a.name;
   $('mpStats').textContent = `${songs.length} song${songs.length === 1 ? '' : 's'}${jams ? ` · 🔥 ${jams.toLocaleString()} jams` : ''} · ${a.public ? 'Artist page on' : 'Artist page off'}`;
-  $('mpView').hidden = !(a.public && a.slug);
-  if (a.slug) $('mpView').href = `/a/${a.slug}`;
+  const live = !!(a.public && a.slug);
+  $('mpView').hidden = !live;
+  if (live) $('mpView').href = `/a/${a.slug}`; else $('mpView').removeAttribute('href');
   const linkNames = Object.keys(LINK_SERVICES).filter((k) => a.links && a.links[k]).map((k) => LINK_SERVICES[k].name);
   $('mpLinks').textContent = [a.website && a.website.replace(/^https?:\/\//, '').replace(/\/$/, ''), linkNames.length && `Listen on: ${linkNames.join(', ')}`].filter(Boolean).join(' · ') || 'No website or streaming links yet. Tap Edit details to add them.';
   const box = $('mpSongs');
