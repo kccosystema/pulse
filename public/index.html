@@ -23,7 +23,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style.css?v=44">
 <link rel="alternate" type="application/rss+xml" title="PulsePic Blog" href="https://pulsepic.com/blog/feed.xml">
 <link rel="canonical" href="https://pulsepic.com/">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "PulsePic", "url": "https://pulsepic.com/", "description": "Make any picture pulse to the beat of a song. Add your track, pick your effects, then share a link or save the video for Instagram Reels, Stories and TikTok.", "applicationCategory": "MultimediaApplication", "operatingSystem": "iOS, Android (web browser)", "browserRequirements": "Requires a modern mobile browser", "image": "https://pulsepic.com/img/og.jpg", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "featureList": ["Beat detection (tempo, beats and bars)", "12 beat-synced effects and 3 presets", "1080p MP4 export for Reels, Stories and TikTok", "Share links with artist info", "Jam (play) counter", "WAV, AIFF and FLAC support", "Edit links without changing the URL"]}</script>
@@ -435,7 +435,7 @@
       <div class="mp-actions">
         <button type="button" id="mpEdit">✏️ Edit details</button>
         <button type="button" id="mpPage">🌐 Artist page</button>
-        <a class="btn" id="mpView" target="_blank" rel="noopener" hidden>View page ↗</a>
+        <a class="btn" id="mpView" target="_blank" rel="noopener">View page ↗</a>
       </div>
       <p class="note mp-links" id="mpLinks"></p>
       <div class="mp-songs-head"><h3>Songs</h3><button type="button" class="accent" id="mpNewSong">+ New song</button></div>
@@ -482,10 +482,10 @@
 <div id="toast" role="status" hidden></div>
 
 <audio id="audio" preload="auto" playsinline></audio>
-<script src="/engine.js"></script>
-<script src="/fast-export.js"></script>
-<script src="/auth.js"></script>
-<script src="/app.js"></script>
-<script src="/home.js"></script>
+<script src="/engine.js?v=44"></script>
+<script src="/fast-export.js?v=44"></script>
+<script src="/auth.js?v=44"></script>
+<script src="/app.js?v=44"></script>
+<script src="/home.js?v=44"></script>
 </body>
 </html>

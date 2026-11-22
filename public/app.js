@@ -488,9 +488,8 @@ async function mpShowArtist(id) {
   $('mpHero').style.backgroundImage = pic ? `url("${pic}")` : '';
   $('mpName').textContent = a.name;
   $('mpStats').textContent = `${songs.length} song${songs.length === 1 ? '' : 's'}${jams ? ` · 🔥 ${jams.toLocaleString()} jams` : ''} · ${a.public ? 'Artist page on' : 'Artist page off'}`;
-  const live = !!(a.public && a.slug);
-  $('mpView').hidden = !live;
-  if (live) $('mpView').href = `/a/${a.slug}`; else $('mpView').removeAttribute('href');
+  // Always shown; with the page off it opens the settings to switch it on.
+  $('mpView').href = a.public && a.slug ? `/a/${a.slug}` : '#';
   const linkNames = Object.keys(LINK_SERVICES).filter((k) => a.links && a.links[k]).map((k) => LINK_SERVICES[k].name);
   $('mpLinks').textContent = [a.website && a.website.replace(/^https?:\/\//, '').replace(/\/$/, ''), linkNames.length && `Listen on: ${linkNames.join(', ')}`].filter(Boolean).join(' · ') || 'No website or streaming links yet. Tap Edit details to add them.';
   const box = $('mpSongs');
@@ -508,6 +507,14 @@ async function mpShowArtist(id) {
 
 $('mpEdit').addEventListener('click', () => mpCurrent && openArtistEdit(mpCurrent));
 $('mpPage').addEventListener('click', () => mpCurrent && openArtistPage(mpCurrent));
+$('mpView').addEventListener('click', (e) => {
+  const a = mpCurrent;
+  if (a && a.public && a.slug) { e.currentTarget.href = `/a/${a.slug}`; return; }
+  e.preventDefault();
+  if (!a) return;
+  openArtistPage(a);
+  toast(`${a.name}'s page is off. Switch it on and save to view it.`);
+});
 $('mpAdd').addEventListener('click', () => openArtistEdit(null));
 // Start a new song with this artist already filled in.
 $('mpNewSong').addEventListener('click', () => {
